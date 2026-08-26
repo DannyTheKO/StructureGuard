@@ -14,1392 +14,254 @@ import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
-/**
- * Handles all StructureGuard commands.
- * 
- * Command Structure:
- * - Discovery: find, listall, info
- * - Rules: enable, disable, rules (manage config-based auto-protection)
- * - Flags: flag (set flags on rules AND existing regions)
- * - Regions: clearregions, addowner/member, removeowner/member
- * - Utility: status, reload
- */
 public class CommandHandler implements CommandExecutor, TabCompleter {
-    
     private final StructureGuardPlugin plugin;
-    
-    public CommandHandler(StructureGuardPlugin plugin) {
-        this.plugin = plugin;
-    }
-    
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) {
-            showHelp(sender);
-            return true;
-        }
-        
+    public CommandHandler(StructureGuardPlugin plugin) { this.plugin = plugin; }
+
+    @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (args.length == 0) { showHelp(sender); return true; }
         String sub = args[0].toLowerCase();
-        
         switch (sub) {
-            // Discovery
-            case "find":
-                return cmdFind(sender, args);
-            case "listall":
-                return cmdListAll(sender, args);
-            case "info":
-                return cmdInfo(sender, args);
-            
-            // Rule management (config-based auto-protection)
-            case "protect":
-                return cmdProtect(sender, args);
-            case "unprotect":
-                return cmdUnprotect(sender, args);
-            case "enable":
-                return cmdEnable(sender, args);
-            case "disable":
-                return cmdDisable(sender, args);
-            case "rules":
-                return cmdRules(sender, args);
-            
-            // Flags (works on both rules and existing regions)
-            case "flag":
-                return cmdFlag(sender, args);
-            
-            // Region management
-            case "clearregions":
-                return cmdClearRegions(sender, args);
-            case "resetworld":
-                return cmdResetWorld(sender, args);
-            case "addowner":
-                return cmdAddOwner(sender, args);
-            case "removeowner":
-                return cmdRemoveOwner(sender, args);
-            case "addmember":
-                return cmdAddMember(sender, args);
-            case "removemember":
-                return cmdRemoveMember(sender, args);
-            
-            // Utility
-            case "list":
-                return cmdList(sender, args);
-            case "status":
-                return cmdStatus(sender, args);
-            case "reload":
-                return cmdReload(sender, args);
-            case "debug":
-                return cmdDebug(sender, args);
-            case "probe":
-                return cmdProbe(sender, args);
-            case "methods":
-                return cmdMethods(sender, args);
-                
-            default:
-                sender.sendMessage("§cUnknown command. Use /sg for help.");
-                return true;
+            case "find": return cmdFind(sender,args);
+            case "listall": return cmdListAll(sender,args);
+            case "info": return cmdInfo(sender,args);
+            case "protect": return cmdProtect(sender,args);
+            case "unprotect": return cmdUnprotect(sender,args);
+            case "enable": return cmdEnable(sender,args);
+            case "disable": return cmdDisable(sender,args);
+            case "rules": return cmdRules(sender,args);
+            case "flag": return cmdFlag(sender,args);
+            case "clearregions": return cmdClearRegions(sender,args);
+            case "resetworld": return cmdResetWorld(sender,args);
+            case "addowner": return cmdAddOwner(sender,args);
+            case "removeowner": return cmdRemoveOwner(sender,args);
+            case "addmember": return cmdAddMember(sender,args);
+            case "removemember": return cmdRemoveMember(sender,args);
+            case "list": return cmdList(sender,args);
+            case "status": return cmdStatus(sender,args);
+            case "reload": return cmdReload(sender,args);
+            case "debug": return cmdDebug(sender,args);
+            case "probe": return cmdProbe(sender,args);
+            case "methods": return cmdMethods(sender,args);
+            default: sender.sendMessage("§cUnknown command. Use /sg for help."); return true;
         }
     }
-    
+
     private void showHelp(CommandSender sender) {
-        sender.sendMessage("§6§l=== StructureGuard ===");
-        sender.sendMessage("§7Automatic structure protection via ChunkLoad events.");
-        sender.sendMessage("");
-        sender.sendMessage("§e§lDiscovery:");
-        sender.sendMessage("§e/sg listall §7- List all structure types in registry");
+        sender.sendMessage("§6§l=== StructureGuard (1.21 BB) ===");
+        sender.sendMessage("§e/sg listall §7- List all structure types");
         sender.sendMessage("§e/sg find <structure> §7- Locate nearest structure");
-        sender.sendMessage("§e/sg info §7- Show structure info at your location");
-        sender.sendMessage("");
-        sender.sendMessage("§e§lProtection Rules §7(auto-protect new chunks):");
-        sender.sendMessage("§e/sg protect <pattern> [radius] [ymin] [ymax] §7- Add & enable protection");
-        sender.sendMessage("§e/sg unprotect <pattern> [--clear] §7- Remove from config (--clear removes regions)");
-        sender.sendMessage("§e/sg enable <pattern> §7- Enable existing rule");
-        sender.sendMessage("§e/sg disable <pattern> §7- Disable rule (keeps in config)");
-        sender.sendMessage("§e/sg rules §7- Show all protection rules");
-        sender.sendMessage("");
-        sender.sendMessage("§e§lFlags & Regions:");
-        sender.sendMessage("§e/sg flag <pattern> <flag> <value> §7- Set flags on rules & regions");
-        sender.sendMessage("§e/sg addowner <pattern> <player|g:group> §7- Add region owner");
-        sender.sendMessage("§e/sg addmember <pattern> <player|g:group> §7- Add region member");
-        sender.sendMessage("§e/sg clearregions <pattern> [world] §7- Remove WorldGuard regions");
-        sender.sendMessage("§e/sg resetworld <world> §7- Clear all data for a world (for resets)");
-        sender.sendMessage("");
-        sender.sendMessage("§e§lUtility:");
-        sender.sendMessage("§e/sg list <pattern> §7- List protected structures");
-        sender.sendMessage("§e/sg status §7- Show system status");
-        sender.sendMessage("§e/sg reload §7- Reload configuration");
-        sender.sendMessage("§e/sg debug §7- Toggle debug mode");
+        sender.sendMessage("§e/sg info §7- Show BB at your location");
+        sender.sendMessage("§e/sg protect <pattern> [padding] §7- Add rule (BB + padding)");
+        sender.sendMessage("§e/sg unprotect <pattern> [--clear] §7- Remove rule");
+        sender.sendMessage("§e/sg enable/disable <pattern> [padding] §7- Toggle rule");
+        sender.sendMessage("§e/sg rules §7- Show rules");
+        sender.sendMessage("§e/sg flag <pattern> <flag> <value>");
+        sender.sendMessage("§e/sg clearregions <pattern> [world]");
+        sender.sendMessage("§e/sg resetworld <world> confirm");
+        sender.sendMessage("§e/sg list <pattern> [page] §7- List DB BB entries");
+        sender.sendMessage("§e/sg status §7- System status");
+        sender.sendMessage("§e/sg reload §7- Reload");
     }
-    
-    // ========================================================================
-    // DISCOVERY COMMANDS
-    // ========================================================================
-    
+
     private boolean cmdFind(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.find")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg find <structure-name>");
-            sender.sendMessage("§7Example: /sg find minecraft:village");
-            sender.sendMessage("§7Use /sg listall to see available structures.");
-            return true;
-        }
-        
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cPlayers only.");
-            return true;
-        }
-        
+        if (!sender.hasPermission("structureguard.find")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length < 2) { sender.sendMessage("§cUsage: /sg find <structure-name>"); return true; }
+        if (!(sender instanceof Player)) { sender.sendMessage("§cPlayers only."); return true; }
         Player player = (Player) sender;
         String structureType = args[1].toLowerCase();
-        
-        // Create pattern for matching - if no namespace, use wildcard
-        String pattern = structureType;
-        if (!structureType.contains(":")) {
-            pattern = "*:*" + structureType + "*";
-        }
-        
+        String pattern = structureType.contains(":") ? structureType : "*:*" + structureType + "*";
         player.sendMessage("§7Searching for " + structureType + " in nearby chunks...");
-        
         int chunkX = player.getLocation().getBlockX() >> 4;
         int chunkZ = player.getLocation().getBlockZ() >> 4;
-        
-        // Search radius of 4 chunks (64 blocks in each direction)
         int searchRadius = 4;
-        
-        StructureFinder.StructureResult nearest = null;
-        double nearestDist = Double.MAX_VALUE;
-        
-        // Scan nearby chunks for matching structures
-        for (int dx = -searchRadius; dx <= searchRadius; dx++) {
-            for (int dz = -searchRadius; dz <= searchRadius; dz++) {
-                List<StructureFinder.StructureResult> results = 
-                    plugin.getStructureFinder().getStructuresInChunk(player.getWorld(), chunkX + dx, chunkZ + dz);
-                
-                for (StructureFinder.StructureResult s : results) {
-                    if (matchesPattern(s.structureType, pattern)) {
-                        double dist = Math.sqrt(
-                            Math.pow(s.x - player.getLocation().getBlockX(), 2) +
-                            Math.pow(s.z - player.getLocation().getBlockZ(), 2)
-                        );
-                        if (dist < nearestDist) {
-                            nearestDist = dist;
-                            nearest = s;
-                        }
-                    }
-                }
+        StructureFinder.StructureResult nearest = null; double nearestDist = Double.MAX_VALUE;
+        for (int dx=-searchRadius; dx<=searchRadius; dx++) for (int dz=-searchRadius; dz<=searchRadius; dz++) {
+            List<StructureFinder.StructureResult> results = plugin.getStructureFinder().getStructuresInChunk(player.getWorld(), chunkX+dx, chunkZ+dz);
+            for (StructureFinder.StructureResult s : results) if (matchesPattern(s.structureType, pattern)) {
+                double dist = Math.sqrt(Math.pow(s.getCenterX()-player.getLocation().getBlockX(),2)+Math.pow(s.getCenterZ()-player.getLocation().getBlockZ(),2));
+                if (dist<nearestDist) { nearestDist=dist; nearest=s; }
             }
         }
-        
-        // Also check database for known structures (may have been found earlier)
         Location dbFound = findNearestFromDatabase(player, pattern);
         if (dbFound != null) {
             double dbDist = player.getLocation().distance(dbFound);
-            if (nearest == null || dbDist < nearestDist) {
-                // Use database result
-                player.sendMessage("§a✓ Found (from database)");
-                player.sendMessage("§7Location: §f" + dbFound.getBlockX() + ", " + dbFound.getBlockZ());
-                player.sendMessage("§7Distance: §f" + String.format("%.0f", dbDist) + " blocks");
-                
-                if (player.hasPermission("structureguard.teleport")) {
-                    TextComponent tp = new TextComponent("§e[Click to teleport]");
-                    tp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
-                        "/minecraft:tp @s " + dbFound.getBlockX() + " " + (dbFound.getBlockY() + 5) + " " + dbFound.getBlockZ()));
-                    tp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                        new ComponentBuilder("Click to teleport").create()));
-                    player.spigot().sendMessage(tp);
-                }
+            if (nearest==null || dbDist < nearestDist) {
+                player.sendMessage("§a✓ Found (from database)"); player.sendMessage("§7Location: §f"+dbFound.getBlockX()+", "+dbFound.getBlockZ()); player.sendMessage("§7Distance: §f"+String.format("%.0f",dbDist)+" blocks");
+                if (player.hasPermission("structureguard.teleport")) { TextComponent tp=new TextComponent("§e[Click to teleport]"); tp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/minecraft:tp @s "+dbFound.getBlockX()+" "+(dbFound.getBlockY()+5)+" "+dbFound.getBlockZ())); tp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to teleport").create())); player.spigot().sendMessage(tp); }
                 return true;
             }
         }
-        
         if (nearest != null) {
-            player.sendMessage("§a✓ Found " + nearest.structureType);
-            player.sendMessage("§7Location: §f" + nearest.x + ", " + nearest.z);
-            player.sendMessage("§7Chunk: §f" + nearest.chunkX + ", " + nearest.chunkZ);
-            player.sendMessage("§7Distance: §f" + String.format("%.0f", nearestDist) + " blocks");
-            
-            // Add to database for future lookups
-            plugin.getDatabase().addStructure(
-                player.getWorld().getName(),
-                nearest.structureType,
-                nearest.x,
-                nearest.z
-            );
-            
-            if (player.hasPermission("structureguard.teleport")) {
-                TextComponent tp = new TextComponent("§e[Click to teleport]");
-                tp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
-                    "/minecraft:tp @s " + nearest.x + " 100 " + nearest.z));
-                tp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                    new ComponentBuilder("Click to teleport").create()));
-                player.spigot().sendMessage(tp);
-            }
-        } else {
-            player.sendMessage("§cNo " + structureType + " found within " + (searchRadius * 16) + " blocks.");
-            player.sendMessage("§7Tip: Use /sg listall to see available structure types.");
-        }
-        
+            player.sendMessage("§a✓ Found "+nearest.structureType); player.sendMessage("§7BB: §f["+nearest.minX+","+nearest.minY+","+nearest.minZ+" -> "+nearest.maxX+","+nearest.maxY+","+nearest.maxZ+"]"); player.sendMessage("§7Center: §f"+nearest.getCenterX()+", "+nearest.getCenterZ()+" §7Chunk: §f"+nearest.chunkX+", "+nearest.chunkZ); player.sendMessage("§7Distance: §f"+String.format("%.0f",nearestDist)+" blocks");
+            plugin.getDatabase().addStructure(player.getWorld().getName(), nearest.structureType, nearest.minX, nearest.minZ, nearest.maxX, nearest.maxZ, nearest.minY, nearest.maxY, nearest.chunkX, nearest.chunkZ);
+            if (player.hasPermission("structureguard.teleport")) { TextComponent tp=new TextComponent("§e[Click to teleport]"); tp.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/minecraft:tp @s "+nearest.getCenterX()+" 100 "+nearest.getCenterZ())); tp.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Click to teleport").create())); player.spigot().sendMessage(tp); }
+        } else { player.sendMessage("§cNo "+structureType+" found within "+(searchRadius*16)+" blocks."); }
         return true;
     }
-    
-    private Location findNearestFromDatabase(Player player, String structureType) {
-        List<int[]> structures = plugin.getDatabase().getStructuresOfType(
-            player.getWorld().getName(), structureType);
-        
-        if (structures.isEmpty()) {
-            return null;
-        }
-        
-        Location playerLoc = player.getLocation();
-        int playerX = playerLoc.getBlockX();
-        int playerZ = playerLoc.getBlockZ();
-        
-        int[] nearest = null;
-        double nearestDist = Double.MAX_VALUE;
-        
-        for (int[] coords : structures) {
-            double dist = Math.sqrt(
-                Math.pow(coords[0] - playerX, 2) + 
-                Math.pow(coords[1] - playerZ, 2)
-            );
-            if (dist < nearestDist) {
-                nearestDist = dist;
-                nearest = coords;
-            }
-        }
-        
-        if (nearest != null && nearestDist <= 10000) {
-            return new Location(player.getWorld(), nearest[0], 64, nearest[1]);
-        }
-        
+
+    private Location findNearestFromDatabase(Player player, String pattern) {
+        List<StructureDatabase.StructureInfo> list = plugin.getDatabase().getStructuresOfType(player.getWorld().getName(), pattern);
+        if (list.isEmpty()) return null;
+        int px = player.getLocation().getBlockX(), pz = player.getLocation().getBlockZ();
+        StructureDatabase.StructureInfo best=null; double bestDist=Double.MAX_VALUE;
+        for (StructureDatabase.StructureInfo s : list) { double d=Math.sqrt(Math.pow(s.getCenterX()-px,2)+Math.pow(s.getCenterZ()-pz,2)); if (d<bestDist){bestDist=d; best=s;} }
+        if (best!=null && bestDist<=10000) return new Location(player.getWorld(), best.getCenterX(), best.getCenterY(), best.getCenterZ());
         return null;
     }
-    
+
     private boolean cmdListAll(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.listall")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
+        if (!sender.hasPermission("structureguard.listall")) { sender.sendMessage("§cNo permission."); return true; }
         sender.sendMessage("§7Loading structure registry...");
-        
         List<String> types = plugin.getStructureFinder().getAllStructureTypes();
-        
-        if (types.isEmpty()) {
-            // Check if we're using chunk-based detection (legacy servers like 1.17)
-            if (plugin.getStructureFinder().isUsingChunkBasedDetection()) {
-                sender.sendMessage("§6This server version uses chunk-based structure detection.");
-                sender.sendMessage("§7The §e/sg listall§7 command is not available on legacy servers (1.17-1.18)");
-                sender.sendMessage("§7because the structure registry is not accessible.");
-                sender.sendMessage("");
-                sender.sendMessage("§aStructure detection still works!§7 Use:");
-                sender.sendMessage("§e  /sg info§7 - Check structures at your location");
-                sender.sendMessage("§e  /sg protect§7 - Protect a structure you're standing in");
-                sender.sendMessage("");
-                sender.sendMessage("§7Common structure types: §fminecraft:village§7, §fminecraft:fortress§7,");
-                sender.sendMessage("§fminecraft:monument§7, §fminecraft:mansion§7, §fminecraft:stronghold");
-            } else {
-                sender.sendMessage("§cNo structure types found in registry.");
-                sender.sendMessage("§7This may indicate a reflection issue. Check console for errors.");
-                sender.sendMessage("§7Try: /sg debug to enable debug logging, then /sg reload");
-            }
-            return true;
-        }
-        
-        // Pagination
-        int page = 1;
-        if (args.length >= 2) {
-            try {
-                page = Integer.parseInt(args[1]);
-            } catch (NumberFormatException e) {
-                page = 1;
-            }
-        }
-        
-        int perPage = 15;
-        int totalPages = (int) Math.ceil(types.size() / (double) perPage);
-        page = Math.max(1, Math.min(page, totalPages));
-        
-        int start = (page - 1) * perPage;
-        int end = Math.min(start + perPage, types.size());
-        
-        sender.sendMessage("§6§l=== Structure Types [" + page + "/" + totalPages + "] ===");
-        
-        for (int i = start; i < end; i++) {
-            String type = types.get(i);
-            String ns = type.contains(":") ? type.substring(0, type.indexOf(":")) : "minecraft";
-            String color = ns.equals("minecraft") ? "§e" : "§d";
-            
-            // Check if protected by a rule
-            ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(type);
-            String status = (rule != null && rule.enabled) ? " §a✓" : "";
-            
-            if (sender instanceof Player) {
-                TextComponent line = new TextComponent(color + type + status);
-                line.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/sg enable " + type));
-                line.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                    new ComponentBuilder("§7Click to enable protection\n§e/sg enable " + type).create()));
-                ((Player) sender).spigot().sendMessage(line);
-            } else {
-                sender.sendMessage(color + type + status);
-            }
-        }
-        
-        sender.sendMessage("§7Total: §f" + types.size() + " §7| §a✓§7 = auto-protected");
-        
-        if (totalPages > 1 && sender instanceof Player) {
-            TextComponent nav = new TextComponent("");
-            if (page > 1) {
-                TextComponent prev = new TextComponent("§a[« Prev] ");
-                prev.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/sg listall " + (page - 1)));
-                nav.addExtra(prev);
-            }
-            nav.addExtra(new TextComponent("§7Page " + page + "/" + totalPages + " "));
-            if (page < totalPages) {
-                TextComponent next = new TextComponent("§a[Next »]");
-                next.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/sg listall " + (page + 1)));
-                nav.addExtra(next);
-            }
-            ((Player) sender).spigot().sendMessage(nav);
-        }
-        
+        if (types.isEmpty()) { sender.sendMessage("§cNo structure types found."); return true; }
+        int page=1; if(args.length>=2) try{page=Integer.parseInt(args[1]);}catch(Exception ignored){}
+        int perPage=15; int totalPages=(int)Math.ceil(types.size()/(double)perPage); page=Math.max(1, Math.min(page,totalPages)); int start=(page-1)*perPage; int end=Math.min(start+perPage, types.size());
+        sender.sendMessage("§6§l=== Structure Types ["+page+"/"+totalPages+"] ===");
+        for(int i=start;i<end;i++){ String type=types.get(i); String ns=type.contains(":")?type.substring(0,type.indexOf(":")):"minecraft"; String color=ns.equals("minecraft")?"§e":"§d"; ConfigManager.ProtectionRule rule=plugin.getConfigManager().getProtectionRule(type); String status=(rule!=null&&rule.enabled)?" §a✓":""; if(sender instanceof Player){ TextComponent line=new TextComponent(color+type+status); line.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/sg enable "+type)); line.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§7Click to enable\n§e/sg enable "+type).create())); ((Player)sender).spigot().sendMessage(line);} else sender.sendMessage(color+type+status); }
+        sender.sendMessage("§7Total: §f"+types.size()+" §7| §a✓§7 = auto-protected");
+        if(totalPages>1 && sender instanceof Player){ TextComponent nav=new TextComponent(""); if(page>1){TextComponent prev=new TextComponent("§a[« Prev] "); prev.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/sg listall "+(page-1))); nav.addExtra(prev);} nav.addExtra(new TextComponent("§7Page "+page+"/"+totalPages+" ")); if(page<totalPages){TextComponent next=new TextComponent("§a[Next »]"); next.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/sg listall "+(page+1))); nav.addExtra(next);} ((Player)sender).spigot().sendMessage(nav); }
         return true;
     }
-    
+
     private boolean cmdInfo(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cPlayers only.");
-            return true;
-        }
-        
-        Player player = (Player) sender;
-        Location loc = player.getLocation();
-        int chunkX = loc.getBlockX() >> 4;
-        int chunkZ = loc.getBlockZ() >> 4;
-        
-        player.sendMessage("§6§l=== Structure Info ===");
-        player.sendMessage("§7Location: §f" + loc.getBlockX() + ", " + loc.getBlockY() + ", " + loc.getBlockZ());
-        player.sendMessage("§7Chunk: §f" + chunkX + ", " + chunkZ);
-        
-        plugin.getConfigManager().debug("cmdInfo: checking structures near chunk " + chunkX + "," + chunkZ);
-        
-        // Check structures SPANNING current AND neighboring chunks (3x3 area)
-        // This finds structures you're standing in, even if not at the origin
-        Map<String, StructureFinder.StructureResult> uniqueStructures = new LinkedHashMap<>();
-        
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                List<StructureFinder.StructureResult> structures = 
-                    plugin.getStructureFinder().getStructuresSpanningChunk(player.getWorld(), chunkX + dx, chunkZ + dz);
-                
-                for (StructureFinder.StructureResult s : structures) {
-                    // Deduplicate by structure type + origin coordinates
-                    String key = s.structureType + "@" + s.x + "," + s.z;
-                    if (!uniqueStructures.containsKey(key)) {
-                        uniqueStructures.put(key, s);
-                    }
-                }
-            }
-        }
-        
-        plugin.getConfigManager().debug("cmdInfo: found " + uniqueStructures.size() + " unique structures in 3x3 chunk area");
-        
-        if (!uniqueStructures.isEmpty()) {
-            player.sendMessage("§7Structures in this area:");
-            for (StructureFinder.StructureResult s : uniqueStructures.values()) {
-                plugin.getConfigManager().debug("cmdInfo: structure " + s.structureType + " at " + s.x + "," + s.z);
-                boolean isProtected = plugin.getDatabase().isStructureProtected(
-                    player.getWorld().getName(), s.structureType, s.x, s.z);
-                String status = isProtected ? " §a(protected)" : " §7(unprotected)";
-                
-                // Calculate distance to origin
-                double dist = Math.sqrt(Math.pow(s.x - loc.getBlockX(), 2) + Math.pow(s.z - loc.getBlockZ(), 2));
-                String distStr = " §8(" + String.format("%.0f", dist) + "b to origin)";
-                
-                // Check if there's a matching rule
-                ConfigManager.ProtectionRule rule = findMatchingRule(s.structureType);
-                if (rule != null && !isProtected) {
-                    status = " §7(unprotected)";
-                    player.sendMessage("  §e" + s.structureType + status + distStr);
-                    
-                    // Create clickable protection message
-                    TextComponent protectLink = new TextComponent("    §a[Click to Protect]");
-                    protectLink.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, 
-                        "/sg protect " + s.structureType));
-                    protectLink.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, 
-                        new ComponentBuilder("§aProtect this structure").create()));
-                    player.spigot().sendMessage(protectLink);
-                } else {
-                    player.sendMessage("  §e" + s.structureType + status + distStr);
-                }
-            }
-        } else {
-            player.sendMessage("§7No structures detected in this area.");
-        }
-        
-        // Check nearest in database
-        StructureDatabase.StructureInfo nearest = plugin.getDatabase().getNearestStructure(
-            player.getWorld().getName(), loc.getBlockX(), loc.getBlockZ(), 96);
-        
-        if (nearest != null) {
-            double dist = Math.sqrt(Math.pow(nearest.x - loc.getX(), 2) + Math.pow(nearest.z - loc.getZ(), 2));
-            player.sendMessage("§7Nearest in database: §e" + nearest.type + " §7(" + String.format("%.0f", dist) + " blocks)");
-            if (nearest.hasRegion) {
-                player.sendMessage("§7Region: §f" + nearest.regionId);
-            }
-        }
-        
+        if (!(sender instanceof Player)) { sender.sendMessage("§cPlayers only."); return true; }
+        Player player=(Player)sender; Location loc=player.getLocation(); int chunkX=loc.getBlockX()>>4, chunkZ=loc.getBlockZ()>>4;
+        player.sendMessage("§6§l=== Structure Info (BB) ==="); player.sendMessage("§7Location: §f"+loc.getBlockX()+", "+loc.getBlockY()+", "+loc.getBlockZ()); player.sendMessage("§7Chunk: §f"+chunkX+", "+chunkZ);
+        Map<String, StructureFinder.StructureResult> uniq=new LinkedHashMap<>();
+        for(int dx=-1;dx<=1;dx++) for(int dz=-1;dz<=1;dz++){ List<StructureFinder.StructureResult> list=plugin.getStructureFinder().getStructuresSpanningChunk(player.getWorld(), chunkX+dx, chunkZ+dz); for(StructureFinder.StructureResult s:list){ String key=s.structureType+"@"+s.chunkX+","+s.chunkZ; if(!uniq.containsKey(key)) uniq.put(key,s);} }
+        if(!uniq.isEmpty()){ player.sendMessage("§7Structures in this area:"); for(StructureFinder.StructureResult s:uniq.values()){ boolean isProtected=plugin.getDatabase().isStructureProtected(player.getWorld().getName(), s.structureType, s.chunkX, s.chunkZ); String status=isProtected?" §a(protected)":" §7(unprotected)"; double dist=Math.sqrt(Math.pow(s.getCenterX()-loc.getBlockX(),2)+Math.pow(s.getCenterZ()-loc.getBlockZ(),2)); String distStr=" §8("+String.format("%.0f",dist)+"b to center)"; String bb=" §8["+s.minX+","+s.minZ+" -> "+s.maxX+","+s.maxZ+" Y"+s.minY+"->"+s.maxY+"]"; player.sendMessage("  §e"+s.structureType+status+distStr+bb); if(!isProtected && findMatchingRule(s.structureType)!=null){ TextComponent link=new TextComponent("    §a[Click to Protect]"); link.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/sg protect "+s.structureType)); link.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§aProtect this structure").create())); player.spigot().sendMessage(link);} } } else player.sendMessage("§7No structures detected in this area.");
+        StructureDatabase.StructureInfo nearest=plugin.getDatabase().getNearestStructure(player.getWorld().getName(), loc.getBlockX(), loc.getBlockZ(), 500);
+        if(nearest!=null){ double dist=Math.sqrt(Math.pow(nearest.getCenterX()-loc.getX(),2)+Math.pow(nearest.getCenterZ()-loc.getZ(),2)); player.sendMessage("§7Nearest in DB: §e"+nearest.type+" §7("+String.format("%.0f",dist)+"b) ["+nearest.minX+","+nearest.minZ+" -> "+nearest.maxX+","+nearest.maxZ+"]"); if(nearest.hasRegion) player.sendMessage("§7Region: §f"+nearest.regionId); }
         return true;
     }
-    
-    // ========================================================================
-    // RULE MANAGEMENT (Config-based auto-protection)
-    // ========================================================================
-    
-    /**
-     * Add a structure pattern to config AND enable it.
-     * This is the primary way to start protecting a structure type.
-     */
+
     private boolean cmdProtect(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2) { sender.sendMessage("§cUsage: /sg protect <pattern> [padding]"); sender.sendMessage("§7Example: /sg protect minecraft:village 5"); return true; }
+        String pattern=args[1].toLowerCase(); if(!pattern.contains(":") && !pattern.equals("*")){ pattern="*:*"+pattern+"*"; sender.sendMessage("§7Using wildcard pattern: §e"+pattern); }
+        int padding=plugin.getConfigManager().getDefaultPadding(); if(args.length>=3) try{padding=Integer.parseInt(args[2]);}catch(NumberFormatException e){sender.sendMessage("§cInvalid padding.");return true;}
+        ConfigManager.ProtectionRule rule=plugin.getConfigManager().getProtectionRule(pattern); boolean isNew=(rule==null); if(rule==null){rule=new ConfigManager.ProtectionRule(); rule.pattern=pattern; rule.flags=new HashMap<>(plugin.getConfigManager().getDefaultFlags());}
+        rule.enabled=true; rule.padding=padding; plugin.getConfigManager().addProtectionRule(rule);
+        if(isNew) sender.sendMessage("§a✓ Added protection rule: §e"+pattern); else sender.sendMessage("§a✓ Updated protection rule: §e"+pattern);
+        sender.sendMessage("§7Padding: "+padding+" | BB Y = minY-padding to maxY+padding");
+        final String finalPattern=pattern; final ConfigManager.ProtectionRule finalRule=rule; int created=protectExistingStructures(finalPattern, finalRule);
+        if(sender instanceof Player && plugin.getRegionManager()!=null && plugin.getRegionManager().isWorldGuardAvailable()){
+            Player player=(Player)sender; int chunkX=player.getLocation().getBlockX()>>4, chunkZ=player.getLocation().getBlockZ()>>4;
+            for(int dx=-2;dx<=2;dx++) for(int dz=-2;dz<=2;dz++){ List<StructureFinder.StructureResult> nearby=plugin.getStructureFinder().getStructuresInChunk(player.getWorld(), chunkX+dx, chunkZ+dz); for(StructureFinder.StructureResult s:nearby) if(matchesPattern(s.structureType, finalPattern)){
+                plugin.getDatabase().addStructure(player.getWorld().getName(), s.structureType, s.minX, s.minZ, s.maxX, s.maxZ, s.minY, s.maxY, s.chunkX, s.chunkZ);
+                StructureDatabase.StructureInfo info=new StructureDatabase.StructureInfo(player.getWorld().getName(), s.structureType, s.minX, s.minZ, s.maxX, s.maxZ, s.minY, s.maxY, s.chunkX, s.chunkZ, false, null);
+                String regionId=plugin.getRegionManager().createRegionWithFlags(info, finalRule.padding, finalRule.flags);
+                if(regionId!=null){ plugin.getDatabase().setRegionId(player.getWorld().getName(), s.structureType, s.chunkX, s.chunkZ, regionId); created++; sender.sendMessage("§a✓ Protected nearby: §e"+s.structureType+" §7["+s.minX+","+s.minZ+" -> "+s.maxX+","+s.maxZ+"]");}
+            } }
         }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg protect <pattern> [radius] [ymin] [ymax]");
-            sender.sendMessage("§7Examples:");
-            sender.sendMessage("§7  /sg protect village §8(matches *:*village* in any namespace)");
-            sender.sendMessage("§7  /sg protect minecraft:village §8(exact match)");
-            sender.sendMessage("§7  /sg protect cobblemon:*_gym 64");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        
-        // If no namespace provided, make it a wildcard pattern that matches any namespace
-        // e.g., "brock" becomes "*:*brock*" to match "cobbleverse:brock"
-        if (!pattern.contains(":") && !pattern.equals("*")) {
-            pattern = "*:*" + pattern + "*";
-            sender.sendMessage("§7Using wildcard pattern: §e" + pattern);
-        }
-        
-        int radius = plugin.getConfigManager().getDefaultRadius();
-        int yMin = plugin.getConfigManager().getDefaultYMin();
-        int yMax = plugin.getConfigManager().getDefaultYMax();
-        
-        if (args.length >= 3) {
-            try { radius = Integer.parseInt(args[2]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid radius."); return true; }
-        }
-        if (args.length >= 4) {
-            try { yMin = Integer.parseInt(args[3]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid y-min."); return true; }
-        }
-        if (args.length >= 5) {
-            try { yMax = Integer.parseInt(args[4]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid y-max."); return true; }
-        }
-        
-        // Create new rule (or update existing)
-        ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(pattern);
-        boolean isNew = (rule == null);
-        
-        if (rule == null) {
-            rule = new ConfigManager.ProtectionRule();
-            rule.pattern = pattern;
-            rule.flags = new HashMap<>(plugin.getConfigManager().getDefaultFlags());
-        }
-        
-        rule.enabled = true;
-        rule.radius = radius;
-        rule.yMin = yMin;
-        rule.yMax = yMax;
-        
-        plugin.getConfigManager().addProtectionRule(rule);
-        
-        if (isNew) {
-            sender.sendMessage("§a✓ Added protection rule: §e" + pattern);
-        } else {
-            sender.sendMessage("§a✓ Updated protection rule: §e" + pattern);
-        }
-        sender.sendMessage("§7Radius: " + radius + " | Y: " + yMin + " to " + yMax);
-        
-        // Retroactively protect structures already in database
-        final String finalPattern = pattern;
-        final ConfigManager.ProtectionRule finalRule = rule;
-        int created = protectExistingStructures(finalPattern, finalRule);
-        
-        // If player is standing near a matching structure, protect it immediately
-        if (sender instanceof Player && plugin.getRegionManager() != null 
-                && plugin.getRegionManager().isWorldGuardAvailable()) {
-            Player player = (Player) sender;
-            int chunkX = player.getLocation().getBlockX() >> 4;
-            int chunkZ = player.getLocation().getBlockZ() >> 4;
-            
-            // Scan nearby chunks for matching structures
-            for (int dx = -2; dx <= 2; dx++) {
-                for (int dz = -2; dz <= 2; dz++) {
-                    List<StructureFinder.StructureResult> nearby = 
-                        plugin.getStructureFinder().getStructuresInChunk(player.getWorld(), chunkX + dx, chunkZ + dz);
-                    
-                    for (StructureFinder.StructureResult s : nearby) {
-                        if (matchesPattern(s.structureType, finalPattern)) {
-                            // Add to database (if not exists)
-                            plugin.getDatabase().addStructure(
-                                player.getWorld().getName(), s.structureType, s.x, s.z);
-                            
-                            // Create StructureInfo and region
-                            StructureDatabase.StructureInfo info = new StructureDatabase.StructureInfo(
-                                player.getWorld().getName(), s.structureType, s.x, s.z, false, null);
-                            
-                            String regionId = plugin.getRegionManager().createRegionWithFlags(
-                                info, finalRule.radius, finalRule.yMin, finalRule.yMax, finalRule.flags);
-                            
-                            if (regionId != null) {
-                                plugin.getDatabase().setRegionId(
-                                    player.getWorld().getName(), s.structureType, s.x, s.z, regionId);
-                                created++;
-                                sender.sendMessage("§a✓ Protected nearby: §e" + s.structureType + " §7at " + s.x + ", " + s.z);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        if (created > 0) {
-            sender.sendMessage("§a✓ Created §e" + created + "§a region(s) total.");
-        } else {
-            sender.sendMessage("§7Structures will be auto-protected when chunks load.");
-        }
-        
+        if(created>0) sender.sendMessage("§a✓ Created §e"+created+"§a region(s) total."); else sender.sendMessage("§7Structures will be auto-protected when chunks load.");
         return true;
     }
-    
-    /**
-     * Create WorldGuard regions for structures already in the database.
-     * Called when a protection rule is added/enabled.
-     */
-    private int protectExistingStructures(String pattern, ConfigManager.ProtectionRule rule) {
-        int created = 0;
-        
-        // Get all structures matching this pattern from the database
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getUnprotectedStructures(pattern);
-        
-        for (StructureDatabase.StructureInfo info : structures) {
-            // Check if this structure matches the pattern
-            if (matchesPattern(info.type, pattern)) {
-                String regionId = plugin.getRegionManager().createRegionWithFlags(
-                    info, rule.radius, rule.yMin, rule.yMax, rule.flags);
-                if (regionId != null) {
-                    created++;
-                }
-            }
-        }
-        
-        return created;
-    }
-    
-    /**
-     * Check if a structure type matches a pattern.
-     */
-    private boolean matchesPattern(String structureType, String pattern) {
-        if (pattern.equals("*")) return true;
-        if (pattern.contains("*")) {
-            String regex = pattern.replace(".", "\\.").replace("*", ".*");
-            return structureType.matches(regex);
-        }
-        return pattern.equals(structureType);
-    }
-    
-    /**
-     * Find a protection rule that matches a structure type.
-     */
-    private ConfigManager.ProtectionRule findMatchingRule(String structureType) {
-        for (Map.Entry<String, ConfigManager.ProtectionRule> entry : 
-                plugin.getConfigManager().getProtectionRules().entrySet()) {
-            if (matchesPattern(structureType, entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Remove a structure pattern from config entirely.
-     * Optionally clears existing WorldGuard regions with --clear flag.
-     */
-    private boolean cmdUnprotect(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg unprotect <pattern> [--clear]");
-            sender.sendMessage("§7Removes the rule from config.");
-            sender.sendMessage("§7Add §e--clear§7 to also remove existing WorldGuard regions.");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        boolean clearRegions = false;
-        
-        // Check for --clear flag
-        for (int i = 2; i < args.length; i++) {
-            if (args[i].equalsIgnoreCase("--clear") || args[i].equalsIgnoreCase("-c")) {
-                clearRegions = true;
-            }
-        }
-        
-        // Use wildcard pattern if no namespace provided
-        if (!pattern.contains(":") && !pattern.equals("*")) {
-            pattern = "*:*" + pattern + "*";
-        }
-        
-        boolean removed = plugin.getConfigManager().removeProtectionRule(pattern);
-        
-        if (!removed) {
-            sender.sendMessage("§cNo rule found for: " + pattern);
-            sender.sendMessage("§7Use /sg rules to see all rules.");
-            return true;
-        }
-        
-        sender.sendMessage("§a✓ Removed protection rule: §e" + pattern);
-        
-        if (clearRegions) {
-            int regionCount = plugin.getRegionManager().clearRegions(pattern);
-            sender.sendMessage("§7Cleared §e" + regionCount + "§7 WorldGuard regions.");
-        } else {
-            sender.sendMessage("§7Existing regions were NOT removed.");
-            sender.sendMessage("§7Use §e/sg clearregions " + pattern + "§7 to remove them.");
-        }
-        
+
+    private int protectExistingStructures(String pattern, ConfigManager.ProtectionRule rule){ int created=0; List<StructureDatabase.StructureInfo> structures=plugin.getDatabase().getUnprotectedStructures(pattern); for(StructureDatabase.StructureInfo info:structures) if(matchesPattern(info.type, pattern)){ String regionId=plugin.getRegionManager().createRegionWithFlags(info, rule.padding, rule.flags); if(regionId!=null) created++; } return created; }
+    private boolean matchesPattern(String t,String p){ if(p.equals("*"))return true; if(p.contains("*")) return t.matches(p.replace(".","\\.").replace("*",".*")); return p.equals(t); }
+    private ConfigManager.ProtectionRule findMatchingRule(String t){ for(Map.Entry<String,ConfigManager.ProtectionRule> e:plugin.getConfigManager().getProtectionRules().entrySet()) if(matchesPattern(t,e.getKey())) return e.getValue(); return null; }
+
+    private boolean cmdUnprotect(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2){ sender.sendMessage("§cUsage: /sg unprotect <pattern> [--clear]"); return true; }
+        String pattern=args[1].toLowerCase(); boolean clear=false; for(int i=2;i<args.length;i++) if(args[i].equalsIgnoreCase("--clear")||args[i].equalsIgnoreCase("-c")) clear=true;
+        if(!pattern.contains(":") && !pattern.equals("*")) pattern="*:*"+pattern+"*";
+        boolean removed=plugin.getConfigManager().removeProtectionRule(pattern); if(!removed){ sender.sendMessage("§cNo rule found for: "+pattern); return true; }
+        sender.sendMessage("§a✓ Removed protection rule: §e"+pattern); if(clear){ int c=plugin.getRegionManager().clearRegions(pattern); sender.sendMessage("§7Cleared §e"+c+"§7 regions."); } else sender.sendMessage("§7Existing regions NOT removed. Use /sg clearregions "+pattern);
         return true;
     }
-    
-    private boolean cmdEnable(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg enable <pattern> [radius] [ymin] [ymax]");
-            sender.sendMessage("§7Examples:");
-            sender.sendMessage("§7  /sg enable minecraft:village");
-            sender.sendMessage("§7  /sg enable minecraft:* 48 -64 320");
-            sender.sendMessage("§7  /sg enable cobblemon:*_gym 64 -64 320");
-            sender.sendMessage("§7  /sg enable * §8(protect ALL structures)");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        int radius = plugin.getConfigManager().getDefaultRadius();
-        int yMin = plugin.getConfigManager().getDefaultYMin();
-        int yMax = plugin.getConfigManager().getDefaultYMax();
-        
-        if (args.length >= 3) {
-            try { radius = Integer.parseInt(args[2]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid radius."); return true; }
-        }
-        if (args.length >= 4) {
-            try { yMin = Integer.parseInt(args[3]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid y-min."); return true; }
-        }
-        if (args.length >= 5) {
-            try { yMax = Integer.parseInt(args[4]); } 
-            catch (NumberFormatException e) { sender.sendMessage("§cInvalid y-max."); return true; }
-        }
-        
-        // Get or create rule
-        ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(pattern);
-        if (rule == null) {
-            rule = new ConfigManager.ProtectionRule();
-            rule.pattern = pattern;
-            rule.flags = new HashMap<>(plugin.getConfigManager().getDefaultFlags());
-        }
-        
-        rule.enabled = true;
-        rule.radius = radius;
-        rule.yMin = yMin;
-        rule.yMax = yMax;
-        
-        plugin.getConfigManager().addProtectionRule(rule);
-        
-        sender.sendMessage("§a✓ Enabled protection rule: §e" + pattern);
-        sender.sendMessage("§7Radius: " + radius + " | Y: " + yMin + " to " + yMax);
-        sender.sendMessage("§7New chunks with matching structures will be auto-protected.");
-        sender.sendMessage("§7Use §e/sg flag " + pattern + " <flag> <value>§7 to set flags.");
-        
+
+    private boolean cmdEnable(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2){ sender.sendMessage("§cUsage: /sg enable <pattern> [padding]"); return true; }
+        String pattern=args[1].toLowerCase(); int padding=plugin.getConfigManager().getDefaultPadding(); if(args.length>=3) try{padding=Integer.parseInt(args[2]);}catch(Exception e){sender.sendMessage("§cInvalid padding.");return true;}
+        ConfigManager.ProtectionRule rule=plugin.getConfigManager().getProtectionRule(pattern); if(rule==null){rule=new ConfigManager.ProtectionRule(); rule.pattern=pattern; rule.flags=new HashMap<>(plugin.getConfigManager().getDefaultFlags());}
+        rule.enabled=true; rule.padding=padding; plugin.getConfigManager().addProtectionRule(rule); sender.sendMessage("§a✓ Enabled protection rule: §e"+pattern+" §7Padding: "+padding); return true;
+    }
+    private boolean cmdDisable(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2){ sender.sendMessage("§cUsage: /sg disable <pattern>"); return true; }
+        String pattern=args[1].toLowerCase(); ConfigManager.ProtectionRule rule=plugin.getConfigManager().getProtectionRule(pattern); if(rule==null){sender.sendMessage("§cNo rule found for: "+pattern); return true;}
+        rule.enabled=false; plugin.getConfigManager().addProtectionRule(rule); sender.sendMessage("§a✓ Disabled: §e"+pattern); return true;
+    }
+    private boolean cmdRules(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        Map<String,ConfigManager.ProtectionRule> rules=plugin.getConfigManager().getProtectionRules(); sender.sendMessage("§6§l=== Protection Rules ==="); if(rules.isEmpty()){sender.sendMessage("§7No rules. Use /sg enable <pattern>"); return true;}
+        for(ConfigManager.ProtectionRule rule:rules.values()){ String status=rule.enabled?"§a●":"§c○"; sender.sendMessage(status+" §e"+rule.pattern+" §7padding §f"+rule.padding); if(!rule.flags.isEmpty()){ StringBuilder sb=new StringBuilder(); int c=0; for(Map.Entry<String,String> f:rule.flags.entrySet()){if(c++>0) sb.append(", "); if(c>3){sb.append("...");break;} sb.append(f.getKey()).append("=").append(f.getValue());} sender.sendMessage("  §7Flags: §f"+sb);} }
+        sender.sendMessage("§7Legend: §a● enabled §c○ disabled — region = BB + padding");
         return true;
     }
-    
-    private boolean cmdDisable(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg disable <pattern>");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        
-        ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(pattern);
-        if (rule == null) {
-            sender.sendMessage("§cNo rule found for: " + pattern);
-            sender.sendMessage("§7Use /sg rules to see all rules.");
-            return true;
-        }
-        
-        rule.enabled = false;
-        plugin.getConfigManager().addProtectionRule(rule);
-        
-        sender.sendMessage("§a✓ Disabled protection rule: §e" + pattern);
-        sender.sendMessage("§7Existing regions are not affected.");
-        sender.sendMessage("§7Use §e/sg clearregions " + pattern + "§7 to remove them.");
-        sender.sendMessage("§7Use §e/sg enable " + pattern + "§7 to re-enable.");
-        
+
+    private boolean cmdFlag(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<4){ sender.sendMessage("§cUsage: /sg flag <pattern> <flag> <value>"); return true; }
+        String pattern=args[1].toLowerCase(), flagName=args[2].toLowerCase(), value=String.join(" ", Arrays.copyOfRange(args,3,args.length)); if(value.startsWith("\"")&&value.endsWith("\"")&&value.length()>1) value=value.substring(1,value.length()-1);
+        int updatedRules=0, updatedRegions=0; ConfigManager.ProtectionRule rule=plugin.getConfigManager().getProtectionRule(pattern); if(rule!=null){ if(value.equalsIgnoreCase("none")||value.equalsIgnoreCase("remove")) rule.flags.remove(flagName); else rule.flags.put(flagName,value); plugin.getConfigManager().addProtectionRule(rule); updatedRules=1;}
+        if(plugin.getRegionManager().isWorldGuardAvailable()) updatedRegions=plugin.getRegionManager().setFlag(pattern, flagName, value);
+        if(updatedRules>0||updatedRegions>0){ sender.sendMessage("§a✓ Set §e"+flagName+" = "+value); if(updatedRules>0) sender.sendMessage("§7Updated rule: §e"+pattern); if(updatedRegions>0) sender.sendMessage("§7Updated §e"+updatedRegions+"§7 regions"); } else sender.sendMessage("§cNo matching rule or regions for: "+pattern);
         return true;
     }
-    
-    private boolean cmdRules(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        Map<String, ConfigManager.ProtectionRule> rules = plugin.getConfigManager().getProtectionRules();
-        
-        sender.sendMessage("§6§l=== Protection Rules ===");
-        
-        if (rules.isEmpty()) {
-            sender.sendMessage("§7No rules configured.");
-            sender.sendMessage("§7Use §e/sg enable <pattern>§7 to add one.");
-            return true;
-        }
-        
-        for (ConfigManager.ProtectionRule rule : rules.values()) {
-            String status = rule.enabled ? "§a●" : "§c○";
-            sender.sendMessage(status + " §e" + rule.pattern);
-            sender.sendMessage("  §7Radius: §f" + rule.radius + " §7| Y: §f" + rule.yMin + "§7 to §f" + rule.yMax);
-            
-            if (!rule.flags.isEmpty()) {
-                StringBuilder flagStr = new StringBuilder();
-                int count = 0;
-                for (Map.Entry<String, String> flag : rule.flags.entrySet()) {
-                    if (count++ > 0) flagStr.append(", ");
-                    if (count > 3) { flagStr.append("..."); break; }
-                    flagStr.append(flag.getKey()).append("=").append(flag.getValue());
-                }
-                sender.sendMessage("  §7Flags: §f" + flagStr);
-            }
-        }
-        
-        sender.sendMessage("§7Legend: §a● §7enabled §c○ §7disabled");
-        
+
+    private boolean cmdClearRegions(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2){ sender.sendMessage("§cUsage: /sg clearregions <pattern> [world]"); return true; }
+        String pattern=args[1]; String worldName=args.length>=3?args[2]:null; int removed; if(pattern.equals("*")){ if(worldName!=null) removed=plugin.getRegionManager().clearAllStructureGuardRegionsInWorld(worldName); else { removed=plugin.getRegionManager().clearAllStructureGuardRegions(); plugin.getDatabase().reset(); }
+            sender.sendMessage("§a✓ Removed "+removed+" regions"); } else { if(worldName!=null) removed=plugin.getRegionManager().clearRegionsInWorld(pattern.toLowerCase(), worldName); else removed=plugin.getRegionManager().clearRegions(pattern.toLowerCase()); sender.sendMessage("§a✓ Removed "+removed+" regions matching '"+pattern+"'"); }
         return true;
     }
-    
-    // ========================================================================
-    // FLAGS (Works on both rules AND existing regions)
-    // ========================================================================
-    
-    private boolean cmdFlag(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 4) {
-            sender.sendMessage("§cUsage: /sg flag <pattern> <flag> <value>");
-            sender.sendMessage("§7This sets flags on:");
-            sender.sendMessage("§7  1. The protection RULE (for future regions)");
-            sender.sendMessage("§7  2. All existing REGIONS matching the pattern");
-            sender.sendMessage("§7Examples:");
-            sender.sendMessage("§7  /sg flag minecraft:village pvp deny");
-            sender.sendMessage("§7  /sg flag minecraft:* block-break deny");
-            sender.sendMessage("§7  /sg flag gym greeting \"Welcome to the Gym!\"");
-            sender.sendMessage("§7Values: allow, deny, none, or text for string flags");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        String flagName = args[2].toLowerCase();
-        String value = String.join(" ", Arrays.copyOfRange(args, 3, args.length));
-        
-        // Remove quotes if present
-        if (value.startsWith("\"") && value.endsWith("\"") && value.length() > 1) {
-            value = value.substring(1, value.length() - 1);
-        }
-        
-        int updatedRules = 0;
-        int updatedRegions = 0;
-        
-        // 1. Update protection rule(s)
-        ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(pattern);
-        if (rule != null) {
-            if (value.equalsIgnoreCase("none") || value.equalsIgnoreCase("remove")) {
-                rule.flags.remove(flagName);
-            } else {
-                rule.flags.put(flagName, value);
-            }
-            plugin.getConfigManager().addProtectionRule(rule);
-            updatedRules = 1;
-        }
-        
-        // 2. Update existing WorldGuard regions
-        if (plugin.getRegionManager().isWorldGuardAvailable()) {
-            updatedRegions = plugin.getRegionManager().setFlag(pattern, flagName, value);
-        }
-        
-        if (updatedRules > 0 || updatedRegions > 0) {
-            sender.sendMessage("§a✓ Set §e" + flagName + " = " + value);
-            if (updatedRules > 0) {
-                sender.sendMessage("§7Updated rule: §e" + pattern);
-            }
-            if (updatedRegions > 0) {
-                sender.sendMessage("§7Updated §e" + updatedRegions + "§7 existing regions");
-            }
-        } else {
-            sender.sendMessage("§cNo matching rule or regions found for: " + pattern);
-        }
-        
+    private boolean cmdResetWorld(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if (args.length<2){ sender.sendMessage("§cUsage: /sg resetworld <world>"); return true; }
+        String worldName=args[1]; if(args.length<3 || !args[2].equalsIgnoreCase("confirm")){ sender.sendMessage("§e⚠ This will remove ALL data for "+worldName); sender.sendMessage("§cType: /sg resetworld "+worldName+" confirm"); return true; }
+        sender.sendMessage("§7Resetting world: "+worldName+"..."); int regionsRemoved=plugin.getRegionManager().clearAllStructureGuardRegionsInWorld(worldName); int structuresRemoved=plugin.getDatabase().clearWorld(worldName); int chunksCleared=plugin.getDatabase().clearScannedChunks(worldName); plugin.getChunkLoadListener().clearWorldCache(worldName); sender.sendMessage("§a✓ Reset: regions "+regionsRemoved+" structures "+structuresRemoved+" chunks "+chunksCleared); return true;
+    }
+    private boolean cmdAddOwner(CommandSender sender, String[] args){ if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; } if(args.length<3){sender.sendMessage("§cUsage: /sg addowner <pattern> <player|g:group>"); return true;} int u=plugin.getRegionManager().addOwner(args[1].toLowerCase(), args[2]); if(u>0) sender.sendMessage("§a✓ Added owner to "+u+" regions."); else sender.sendMessage("§cNo regions matching."); return true; }
+    private boolean cmdRemoveOwner(CommandSender sender, String[] args){ if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; } if(args.length<3){sender.sendMessage("§cUsage: /sg removeowner <pattern> <player|g:group>"); return true;} int u=plugin.getRegionManager().removeOwner(args[1].toLowerCase(), args[2]); if(u>0) sender.sendMessage("§a✓ Removed owner from "+u+" regions."); else sender.sendMessage("§cNo matching regions."); return true; }
+    private boolean cmdAddMember(CommandSender sender, String[] args){ if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; } if(args.length<3){sender.sendMessage("§cUsage: /sg addmember <pattern> <player|g:group>"); return true;} int u=plugin.getRegionManager().addMember(args[1].toLowerCase(), args[2]); if(u>0) sender.sendMessage("§a✓ Added member to "+u+" regions."); else sender.sendMessage("§cNo regions matching."); return true; }
+    private boolean cmdRemoveMember(CommandSender sender, String[] args){ if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; } if(args.length<3){sender.sendMessage("§cUsage: /sg removemember <pattern> <player|g:group>"); return true;} int u=plugin.getRegionManager().removeMember(args[1].toLowerCase(), args[2]); if(u>0) sender.sendMessage("§a✓ Removed member from "+u+" regions."); else sender.sendMessage("§cNo matching regions."); return true; }
+
+    private boolean cmdList(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        String pattern=args.length>=2?args[1].toLowerCase():"*"; int page=1; if(args.length>=3) try{page=Integer.parseInt(args[2]);}catch(Exception ignored){}
+        List<StructureDatabase.StructureInfo> structures=plugin.getDatabase().getStructures(pattern); if(structures.isEmpty()){sender.sendMessage("§7No structures matching '"+pattern+"'"); return true;}
+        int perPage=10; int totalPages=(structures.size()+perPage-1)/perPage; page=Math.max(1,Math.min(page,totalPages)); int start=(page-1)*perPage; int end=Math.min(start+perPage, structures.size());
+        sender.sendMessage("§6§l=== Protected Structures ["+page+"/"+totalPages+"] ===");
+        for(int i=start;i<end;i++){ StructureDatabase.StructureInfo info=structures.get(i); String status=info.hasRegion?"§a✓":"§7○"; String bb="["+info.minX+","+info.minZ+" -> "+info.maxX+","+info.maxZ+" Y"+info.minY+"->"+info.maxY+"]"; if(sender instanceof Player){ TextComponent line=new TextComponent(status+" §f"+info.type+" "+bb); line.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/minecraft:tp @s "+info.getCenterX()+" 100 "+info.getCenterZ())); line.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("§eClick to teleport\n§7"+info.world).create())); ((Player)sender).spigot().sendMessage(line);} else sender.sendMessage(status+" "+info.type+" "+bb+" in "+info.world); }
+        sender.sendMessage("§7Total: "+structures.size()+" | §a✓ has region");
         return true;
     }
-    
-    // ========================================================================
-    // REGION MANAGEMENT
-    // ========================================================================
-    
-    private boolean cmdClearRegions(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg clearregions <pattern> [world]");
-            sender.sendMessage("§7Examples:");
-            sender.sendMessage("§7  /sg clearregions minecraft:village");
-            sender.sendMessage("§7  /sg clearregions * §8(remove ALL sg_ regions)");
-            return true;
-        }
-        
-        String pattern = args[1];
-        String worldName = args.length >= 3 ? args[2] : null;
-        int removed;
-        
-        if (pattern.equals("*")) {
-            if (worldName != null) {
-                removed = plugin.getRegionManager().clearAllStructureGuardRegionsInWorld(worldName);
-                sender.sendMessage("§a✓ Removed " + removed + " regions from " + worldName);
-            } else {
-                removed = plugin.getRegionManager().clearAllStructureGuardRegions();
-                plugin.getDatabase().reset();
-                sender.sendMessage("§a✓ Removed " + removed + " regions from all worlds");
-                sender.sendMessage("§7Database has been reset.");
-            }
-        } else {
-            if (worldName != null) {
-                removed = plugin.getRegionManager().clearRegionsInWorld(pattern.toLowerCase(), worldName);
-            } else {
-                removed = plugin.getRegionManager().clearRegions(pattern.toLowerCase());
-            }
-            sender.sendMessage("§a✓ Removed " + removed + " regions matching '" + pattern + "'");
-        }
-        
+
+    private boolean cmdStatus(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        sender.sendMessage("§6§l=== StructureGuard Status (1.21 BB) ===");
+        boolean wg=plugin.getRegionManager().isWorldGuardAvailable(); sender.sendMessage("§7WorldGuard: "+(wg?"§aAvailable":"§cNot found"));
+        Map<String,ConfigManager.ProtectionRule> rules=plugin.getConfigManager().getProtectionRules(); int enabled=(int)rules.values().stream().filter(r->r.enabled).count(); sender.sendMessage("§7Rules: §f"+enabled+"§7 enabled / §f"+rules.size()+"§7 total (padding BB)");
+        int total=plugin.getDatabase().getTotalCount(), prot=plugin.getDatabase().getProtectedCount(); sender.sendMessage("§7Database: §f"+total+"§7 structures (§a"+prot+"§7 protected) — BB corners");
+        ChunkLoadListener l=plugin.getChunkLoadListener(); if(l!=null){ long proc=l.getProcessedChunkCount(), pend=l.getPendingCount(); sender.sendMessage("§7On-Demand: §aActive §7("+proc+" chunks"+(pend>0?", "+pend+" queued":"")+ ")"); } else sender.sendMessage("§7On-Demand: §cInactive");
+        sender.sendMessage("§7Detection: §f"+plugin.getStructureFinder().getDetectionPathInfo());
+        sender.sendMessage("§7Debug: "+(plugin.getConfigManager().isDebugMode()?"§aOn":"§7Off"));
         return true;
     }
-    
-    /**
-     * Reset a world completely - remove all regions, structures, and scan history.
-     * Used when resetting resource worlds.
-     */
-    private boolean cmdResetWorld(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /sg resetworld <world>");
-            sender.sendMessage("§7Removes all StructureGuard data for a world.");
-            sender.sendMessage("§7Use this before resetting a resource world.");
-            return true;
-        }
-        
-        String worldName = args[1];
-        
-        // Confirmation check
-        if (args.length < 3 || !args[2].equalsIgnoreCase("confirm")) {
-            sender.sendMessage("§e⚠ This will remove ALL StructureGuard data for world: §f" + worldName);
-            sender.sendMessage("§7  - All WorldGuard regions (sg_* prefix)");
-            sender.sendMessage("§7  - All structure records in database");
-            sender.sendMessage("§7  - All chunk scan history");
-            sender.sendMessage("");
-            sender.sendMessage("§cType: /sg resetworld " + worldName + " confirm");
-            return true;
-        }
-        
-        sender.sendMessage("§7Resetting world: " + worldName + "...");
-        
-        // 1. Remove all WorldGuard regions
-        int regionsRemoved = plugin.getRegionManager().clearAllStructureGuardRegionsInWorld(worldName);
-        
-        // 2. Remove all structures from database for this world
-        int structuresRemoved = plugin.getDatabase().clearWorld(worldName);
-        
-        // 3. Clear scanned chunks for this world
-        int chunksCleared = plugin.getDatabase().clearScannedChunks(worldName);
-        
-        // 4. Clear memory cache for this world
-        plugin.getChunkLoadListener().clearWorldCache(worldName);
-        
-        sender.sendMessage("§a✓ World reset complete: §f" + worldName);
-        sender.sendMessage("§7  Regions removed: " + regionsRemoved);
-        sender.sendMessage("§7  Structures cleared: " + structuresRemoved);
-        sender.sendMessage("§7  Chunks unmarked: " + chunksCleared);
-        sender.sendMessage("§7The world is now ready for regeneration.");
-        
-        return true;
+    private boolean cmdReload(CommandSender sender, String[] args){ if(!sender.hasPermission("structureguard.admin")){sender.sendMessage("§cNo permission.");return true;} plugin.reload(); sender.sendMessage("§a✓ Reloaded. Old DB was wiped on startup (BB schema)."); return true; }
+    private boolean cmdDebug(CommandSender sender, String[] args){ if(!sender.hasPermission("structureguard.admin")){sender.sendMessage("§cNo permission.");return true;} boolean cur=plugin.getConfigManager().isDebugMode(); plugin.getConfigManager().setDebugMode(!cur); sender.sendMessage("§7Debug: "+(!cur?"§aOn":"§cOff")); return true; }
+    private boolean cmdProbe(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if(!(sender instanceof Player)){ sender.sendMessage("§cPlayers only."); return true;}
+        Player p=(Player)sender; int cx=p.getLocation().getBlockX()>>4, cz=p.getLocation().getBlockZ()>>4; if(args.length>=3) try{cx=Integer.parseInt(args[1]); cz=Integer.parseInt(args[2]);}catch(Exception ignored){}
+        List<String> out=plugin.getStructureFinder().probeChunkVerbose(p.getWorld(), cx, cz); for(String s:out) sender.sendMessage(s); return true;
     }
-    
-    private boolean cmdAddOwner(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 3) {
-            sender.sendMessage("§cUsage: /sg addowner <pattern> <player|g:group>");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        String target = args[2];
-        
-        int updated = plugin.getRegionManager().addOwner(pattern, target);
-        
-        if (updated > 0) {
-            sender.sendMessage("§a✓ Added owner '" + target + "' to " + updated + " regions.");
-        } else {
-            sender.sendMessage("§cNo regions matching '" + pattern + "' found.");
-        }
-        
-        return true;
+    private boolean cmdMethods(CommandSender sender, String[] args){
+        if (!sender.hasPermission("structureguard.admin")) { sender.sendMessage("§cNo permission."); return true; }
+        if(!(sender instanceof Player)){ sender.sendMessage("§cConsole not supported"); return true;}
+        Player p=(Player)sender; List<String> out=plugin.getStructureFinder().dumpChunkMethods(p.getWorld()); for(String s:out) sender.sendMessage(s); return true;
     }
-    
-    private boolean cmdRemoveOwner(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 3) {
-            sender.sendMessage("§cUsage: /sg removeowner <pattern> <player|g:group>");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        String target = args[2];
-        
-        int updated = plugin.getRegionManager().removeOwner(pattern, target);
-        
-        if (updated > 0) {
-            sender.sendMessage("§a✓ Removed owner '" + target + "' from " + updated + " regions.");
-        } else {
-            sender.sendMessage("§cNo matching regions or owner not present.");
-        }
-        
-        return true;
-    }
-    
-    private boolean cmdAddMember(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 3) {
-            sender.sendMessage("§cUsage: /sg addmember <pattern> <player|g:group>");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        String target = args[2];
-        
-        int updated = plugin.getRegionManager().addMember(pattern, target);
-        
-        if (updated > 0) {
-            sender.sendMessage("§a✓ Added member '" + target + "' to " + updated + " regions.");
-        } else {
-            sender.sendMessage("§cNo regions matching '" + pattern + "' found.");
-        }
-        
-        return true;
-    }
-    
-    private boolean cmdRemoveMember(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (args.length < 3) {
-            sender.sendMessage("§cUsage: /sg removemember <pattern> <player|g:group>");
-            return true;
-        }
-        
-        String pattern = args[1].toLowerCase();
-        String target = args[2];
-        
-        int updated = plugin.getRegionManager().removeMember(pattern, target);
-        
-        if (updated > 0) {
-            sender.sendMessage("§a✓ Removed member '" + target + "' from " + updated + " regions.");
-        } else {
-            sender.sendMessage("§cNo matching regions or member not present.");
-        }
-        
-        return true;
-    }
-    
-    // ========================================================================
-    // UTILITY COMMANDS
-    // ========================================================================
-    
-    private boolean cmdList(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        String pattern = args.length >= 2 ? args[1].toLowerCase() : "*";
-        int page = 1;
-        if (args.length >= 3) {
-            try { page = Integer.parseInt(args[2]); } catch (NumberFormatException e) { page = 1; }
-        }
-        
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getStructures(pattern);
-        
-        if (structures.isEmpty()) {
-            sender.sendMessage("§7No structures matching '" + pattern + "' in database.");
-            sender.sendMessage("§7Structures are added when chunks load with enabled protection rules.");
-            return true;
-        }
-        
-        int perPage = 10;
-        int totalPages = (structures.size() + perPage - 1) / perPage;
-        page = Math.max(1, Math.min(page, totalPages));
-        
-        int start = (page - 1) * perPage;
-        int end = Math.min(start + perPage, structures.size());
-        
-        sender.sendMessage("§6§l=== Protected Structures [" + page + "/" + totalPages + "] ===");
-        
-        for (int i = start; i < end; i++) {
-            StructureDatabase.StructureInfo info = structures.get(i);
-            String status = info.hasRegion ? "§a✓" : "§7○";
-            
-            if (sender instanceof Player) {
-                TextComponent line = new TextComponent(status + " §f" + info.type + " §7at §e" + info.x + ", " + info.z);
-                line.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND,
-                    "/minecraft:tp @s " + info.x + " 100 " + info.z));
-                line.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    new ComponentBuilder("§eClick to teleport\n§7" + info.world).create()));
-                ((Player) sender).spigot().sendMessage(line);
-            } else {
-                sender.sendMessage(status + " §f" + info.type + " §7at §e" + info.x + ", " + info.z);
-            }
-        }
-        
-        sender.sendMessage("§7Total: " + structures.size() + " | §a✓§7 = has region");
-        
-        return true;
-    }
-    
-    private boolean cmdStatus(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        sender.sendMessage("§6§l=== StructureGuard Status ===");
-        
-        // WorldGuard
-        boolean wgAvailable = plugin.getRegionManager().isWorldGuardAvailable();
-        sender.sendMessage("§7WorldGuard: " + (wgAvailable ? "§aAvailable" : "§cNot found"));
-        
-        // Protection rules
-        Map<String, ConfigManager.ProtectionRule> rules = plugin.getConfigManager().getProtectionRules();
-        int enabledRules = (int) rules.values().stream().filter(r -> r.enabled).count();
-        sender.sendMessage("§7Protection Rules: §f" + enabledRules + "§7 enabled / §f" + rules.size() + "§7 total");
-        
-        // Database
-        int total = plugin.getDatabase().getTotalCount();
-        int protectedCount = plugin.getDatabase().getProtectedCount();
-        sender.sendMessage("§7Database: §f" + total + "§7 structures (§a" + protectedCount + "§7 protected)");
-        
-        // Chunk listener
-        ChunkLoadListener listener = plugin.getChunkLoadListener();
-        if (listener != null) {
-            long processed = listener.getProcessedChunkCount();
-            long pending = listener.getPendingCount();
-            String pendingInfo = pending > 0 ? ", §e" + pending + " queued§7" : "";
-            sender.sendMessage("§7On-Demand: §aActive §7(" + processed + " chunks" + pendingInfo + ")");
-        } else {
-            sender.sendMessage("§7On-Demand: §cInactive");
-        }
-        
-        // Detection path info
-        sender.sendMessage("§7Detection: §f" + plugin.getStructureFinder().getDetectionPathInfo());
-        
-        // Debug mode
-        sender.sendMessage("§7Debug: " + (plugin.getConfigManager().isDebugMode() ? "§aON" : "§7off"));
-        
-        // Structure registry test
-        List<String> types = plugin.getStructureFinder().getAllStructureTypes();
-        sender.sendMessage("§7Registry: §f" + types.size() + "§7 structure types");
-        
-        // Tip for probe command
-        sender.sendMessage("§7Use §e/sg probe§7 to diagnose structure detection issues");
-        
-        return true;
-    }
-    
-    private boolean cmdReload(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        sender.sendMessage("§7Reloading configuration...");
-        
-        plugin.reload();
-        
-        // Clear chunk listener cache so it reprocesses
-        ChunkLoadListener listener = plugin.getChunkLoadListener();
-        if (listener != null) {
-            listener.clearCache();
-        }
-        
-        sender.sendMessage("§a✓ Configuration reloaded.");
-        sender.sendMessage("§7Check console for sync details (regions updated/created).");
-        
-        return true;
-    }
-    
-    private boolean cmdDebug(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        boolean current = plugin.getConfigManager().isDebugMode();
-        plugin.getConfigManager().setDebugMode(!current);
-        
-        sender.sendMessage("§7Debug mode: " + (!current ? "§aON" : "§cOFF"));
-        if (!current) {
-            sender.sendMessage("§7Check console for detailed structure detection logs.");
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Probe chunk for structures - diagnostic command.
-     */
-    private boolean cmdProbe(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cPlayers only.");
-            return true;
-        }
-        
-        Player player = (Player) sender;
-        int chunkX = player.getLocation().getBlockX() >> 4;
-        int chunkZ = player.getLocation().getBlockZ() >> 4;
-        
-        // Allow specifying chunk coords
-        if (args.length >= 3) {
-            try {
-                chunkX = Integer.parseInt(args[1]);
-                chunkZ = Integer.parseInt(args[2]);
-            } catch (NumberFormatException e) {
-                sender.sendMessage("§cUsage: /sg probe [chunkX] [chunkZ]");
-                return true;
-            }
-        }
-        
-        List<String> output = plugin.getStructureFinder().probeChunkVerbose(player.getWorld(), chunkX, chunkZ);
-        for (String line : output) {
-            sender.sendMessage(line);
-        }
-        
-        // Also check database for structures near this chunk
-        int blockX = chunkX * 16 + 8;
-        int blockZ = chunkZ * 16 + 8;
-        StructureDatabase.StructureInfo nearestDb = plugin.getDatabase().getNearestStructure(
-            player.getWorld().getName(), blockX, blockZ, 128);
-        if (nearestDb != null) {
-            double dist = Math.sqrt(Math.pow(nearestDb.x - blockX, 2) + Math.pow(nearestDb.z - blockZ, 2));
-            sender.sendMessage("§7Database nearest: §e" + nearestDb.type + " §7(" + String.format("%.0f", dist) + " blocks)");
-        } else {
-            sender.sendMessage("§7Database: no structures within 128 blocks");
-        }
-        
-        return true;
-    }
-    
-    /**
-     * Dump all Map-returning methods on chunks - diagnostic command.
-     */
-    private boolean cmdMethods(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("structureguard.admin")) {
-            sender.sendMessage("§cNo permission.");
-            return true;
-        }
-        
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("§cPlayers only.");
-            return true;
-        }
-        
-        Player player = (Player) sender;
-        
-        List<String> output = plugin.getStructureFinder().dumpChunkMethods(player.getWorld());
-        for (String line : output) {
-            sender.sendMessage(line);
-        }
-        
-        sender.sendMessage("§7Methods with §agreen§7 text likely contain structure data.");
-        
-        return true;
-    }
-    
-    // ========================================================================
-    // TAB COMPLETION
-    // ========================================================================
-    
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> completions = new ArrayList<>();
-        
-        if (args.length == 1) {
-            completions.addAll(Arrays.asList(
-                "find", "listall", "info",
-                "protect", "unprotect", "enable", "disable", "rules",
-                "flag", "clearregions", "resetworld", "addowner", "removeowner", "addmember", "removemember",
-                "list", "status", "reload", "debug"
-            ));
-        } else if (args.length == 2) {
-            String sub = args[0].toLowerCase();
-            
-            switch (sub) {
-                case "find":
-                    completions.addAll(plugin.getStructureFinder().getAllStructureTypes());
-                    break;
-                case "protect":
-                case "enable":
-                    completions.addAll(plugin.getStructureFinder().getAllStructureTypes());
-                    // Add wildcard patterns for namespaces that actually exist
-                    completions.add("*");
-                    Set<String> namespaces = new HashSet<>();
-                    for (String type : plugin.getStructureFinder().getAllStructureTypes()) {
-                        if (type.contains(":")) {
-                            namespaces.add(type.substring(0, type.indexOf(":")));
-                        }
-                    }
-                    for (String ns : namespaces) {
-                        completions.add(ns + ":*");
-                    }
-                    break;
-                case "unprotect":
-                case "disable":
-                    completions.addAll(plugin.getConfigManager().getProtectionRules().keySet());
-                    break;
-                case "resetworld":
-                    // List all world names
-                    for (org.bukkit.World w : plugin.getServer().getWorlds()) {
-                        completions.add(w.getName());
-                    }
-                    break;
-                case "flag":
-                case "clearregions":
-                case "addowner":
-                case "removeowner":
-                case "addmember":
-                case "removemember":
-                case "list":
-                    completions.add("*");
-                    completions.addAll(plugin.getConfigManager().getProtectionRules().keySet());
-                    completions.addAll(plugin.getDatabase().getStructureTypes());
-                    break;
-            }
-        } else if (args.length == 3) {
-            String sub = args[0].toLowerCase();
-            
-            switch (sub) {
-                case "protect":
-                case "enable":
-                    // Show descriptive hint instead of just numbers
-                    completions.add("<radius>");
-                    break;
-                case "unprotect":
-                    completions.add("--clear");
-                    break;
-                case "flag":
-                    // Get all available WorldGuard flags dynamically (includes Extra Flags if installed)
-                    completions.addAll(plugin.getRegionManager().getAvailableFlags());
-                    break;
-                case "clearregions":
-                    completions.add("*");
-                    for (World w : Bukkit.getWorlds()) {
-                        completions.add(w.getName());
-                    }
-                    break;
-                case "addowner":
-                case "removeowner":
-                case "addmember":
-                case "removemember":
-                    for (Player p : Bukkit.getOnlinePlayers()) {
-                        completions.add(p.getName());
-                    }
-                    completions.add("g:");
-                    break;
-            }
-        } else if (args.length == 4) {
-            String sub = args[0].toLowerCase();
-            
-            if (sub.equals("protect") || sub.equals("enable")) {
-                completions.add("<ymin>");
-            } else if (sub.equals("flag")) {
-                completions.addAll(Arrays.asList("allow", "deny", "none"));
-            }
-        } else if (args.length == 5) {
-            if (args[0].equalsIgnoreCase("protect") || args[0].equalsIgnoreCase("enable")) {
-                completions.add("<ymax>");
-            }
-        }
-        
-        String current = args[args.length - 1].toLowerCase();
-        return completions.stream()
-            .filter(s -> s.toLowerCase().startsWith(current))
-            .distinct()
-            .collect(Collectors.toList());
+
+    @Override public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args){
+        if(args.length==1) return Arrays.asList("find","listall","info","protect","unprotect","enable","disable","rules","flag","clearregions","resetworld","addowner","removeowner","addmember","removemember","list","status","reload","debug","probe","methods").stream().filter(s->s.startsWith(args[0].toLowerCase())).collect(java.util.stream.Collectors.toList());
+        if(args.length==2 && (args[0].equalsIgnoreCase("protect")||args[0].equalsIgnoreCase("enable")||args[0].equalsIgnoreCase("flag")||args[0].equalsIgnoreCase("clearregions")||args[0].equalsIgnoreCase("list"))) { List<String> all=plugin.getStructureFinder().getAllStructureTypes(); List<String> res=new ArrayList<>(); String pref=args[1].toLowerCase(); for(String t:all) if(t.toLowerCase().startsWith(pref)) res.add(t); if(res.isEmpty()) res.add("<pattern>"); return res; }
+        return Collections.emptyList();
     }
 }

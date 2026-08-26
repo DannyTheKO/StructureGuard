@@ -1,31 +1,13 @@
 # =============================================================================
-# StructureGuard Configuration
-# On-Demand Structure Protection System
+# StructureGuard Configuration — 1.21+ BoundingBox Mode
 # =============================================================================
-# Reload with /sg reload
-
-# Enable debug logging (shows structure detection in console)
 debug: false
-
-# Process existing chunks when they load (not just newly generated ones)
-# Set to true for existing worlds, false for new worlds only
 process-existing-chunks: true
-
-# Worlds where structure protection is completely disabled
-# Useful for resource worlds that reset periodically
 disabled-worlds:
   # - resource_world
-  # - mining_world
 
-# Default protection settings (used when not specified in /sg protect)
-default-radius: 48
-default-y-min: -64
-default-y-max: 320
+default-padding: 5
 
-# Default WorldGuard flags applied to new regions
-# Note: WorldGuard already denies block-break/place by default in regions
-# Only specify flags here that you want to change from WorldGuard defaults
-# Customize per-structure with /sg flag <pattern> <flag> <value>
 default-flags:
   use: allow
   interact: allow
@@ -33,46 +15,20 @@ default-flags:
   tnt: deny
   deny-message: "&cThis structure is protected!"
 
-# =============================================================================
-# PROTECTION RULES
-# =============================================================================
-# Structures here are auto-protected when their chunk loads.
-# Use /sg protect <pattern> in-game to add rules.
-# 
+# Protection Rules — region = BoundingBox expanded by `padding` blocks on all sides
+# Y bounds are taken from structure BB (minY/maxY) ± padding, clamped to world height
 # Format:
-#   "namespace:structure":   # Use quotes around patterns with colons
-#     enabled: true          # Whether this rule is active
-#     radius: 48             # Protection radius from structure center
-#     y-min: -64             # Minimum Y level
-#     y-max: 320             # Maximum Y level
-#     priority: 10           # Higher = takes precedence
-#     flags:                 # WorldGuard flags for this type
-#       block-break: deny
-#
-# Wildcards (* matches any text):
-#   "*":                     # All structures
-#   "minecraft:*":           # All vanilla structures  
-#   "minecraft:village*":    # All villages (village_plains, village_desert, etc.)
-#   "cobblemon:*_gym":       # All Cobblemon gyms
-#
-# Example:
-#   "minecraft:village*":
+#   "namespace:structure":
 #     enabled: true
-#     radius: 64
-#     y-min: -64
-#     y-max: 320
+#     padding: 5
 #     priority: 10
 #     flags:
-#       block-break: deny
 #       pvp: deny
+#
+# Wildcards: "*", "minecraft:*", "minecraft:village*", "cobblemon:*_gym"
 
 protected-structures:
-  # Add rules with /sg protect <pattern>
+  # Add rules with /sg protect <pattern> [padding]
 
-# =============================================================================
-# PERMISSIONS
-# =============================================================================
-# structureguard.admin      - All commands
-# structureguard.find       - /sg find
-# structureguard.listall    - /sg listall  
-# structureguard.teleport   - Clickable teleport links
+# Permissions:
+# structureguard.admin, structureguard.find, structureguard.listall, structureguard.teleport

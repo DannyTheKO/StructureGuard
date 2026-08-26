@@ -1,9 +1,9 @@
 name: StructureGuard
 version: '${version}'
 main: com.structureguard.StructureGuardPlugin
-api-version: '1.17'
+api-version: '1.21'
 authors: [StructureProtect]
-description: NMS-based structure discovery with WorldGuard region protection (1.17+)
+description: NMS-based structure discovery with WorldGuard region protection (1.21+)
 website: https://github.com/yourusername/ProtectStructures
 softdepend: [WorldGuard, WorldGuardExtraFlags]
 
@@ -14,7 +14,7 @@ commands:
     usage: |
       /sg find <structure> - Locate nearest structure
       /sg scan <radius|border> - Scan area for all structures
-      /sg protect <pattern> <radius> <ymin> <ymax> - Create WorldGuard regions
+      /sg protect <pattern> [padding] - Create WorldGuard regions
       /sg clearregions <pattern> - Remove WorldGuard regions
       /sg flag <pattern> <flag> <value> - Set region flags
       /sg addowner <pattern> <player|g:group> - Add region owner
@@ -52,7 +52,6 @@ permissions:
       structureguard.reload: true
       structureguard.teleport: true
   
-  # Basic read-only access for helpers
   structureguard.helper:
     description: Read-only access to view structures
     default: false
@@ -62,7 +61,6 @@ permissions:
       structureguard.listall: true
       structureguard.info: true
   
-  # Moderator - can find and protect but not manage permissions
   structureguard.moderator:
     description: Can find and protect structures
     default: false
