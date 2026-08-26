@@ -1,31 +1,29 @@
-package com.structureguard;
+package com.structureguard.region;
 
 import com.sk89q.worldedit.bukkit.BukkitAdapter;
 import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldguard.WorldGuard;
 import com.sk89q.worldguard.protection.flags.Flag;
-import com.sk89q.worldguard.protection.flags.FlagContext;
-import com.sk89q.worldguard.protection.flags.Flags;
-import com.sk89q.worldguard.protection.flags.StateFlag;
-import com.sk89q.worldguard.protection.flags.registry.FlagRegistry;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
 import com.sk89q.worldguard.protection.regions.RegionContainer;
+import com.structureguard.StructureGuardPlugin;
+import com.structureguard.config.ProtectionRule;
+import com.structureguard.database.model.StructureInfo;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 
 import java.util.*;
 
 public class RegionManager {
-    
     private final StructureGuardPlugin plugin;
     private boolean worldGuardAvailable = false;
-    
+
     public RegionManager(StructureGuardPlugin plugin) {
         this.plugin = plugin;
         checkWorldGuard();
     }
-    
+
     private void checkWorldGuard() {
         try {
             Class.forName("com.sk89q.worldguard.WorldGuard");
@@ -35,22 +33,18 @@ public class RegionManager {
             worldGuardAvailable = false;
         }
     }
-    
-    public boolean isWorldGuardAvailable() { return worldGuardAvailable; }
 
+    public boolean isWorldGuardAvailable() { return worldGuardAvailable; }
     private int worldMinY(World w) { try { return w.getMinHeight(); } catch (Exception e) { return -64; } }
     private int worldMaxY(World w) { try { return w.getMaxHeight() + w.getMinHeight() - 1; } catch (Exception e) { return 320; } }
 
-    public String createRegion(StructureDatabase.StructureInfo info, int padding) {
+    public String createRegion(StructureInfo info, int padding) {
         return createRegionWithFlags(info, padding, plugin.getConfigManager().getDefaultFlags());
     }
 
-    @Deprecated
-    public String createRegion(StructureDatabase.StructureInfo info, int radius, int yMin, int yMax) {
-        return createRegion(info, radius);
-    }
+    @Deprecated public String createRegion(StructureInfo info, int radius, int yMin, int yMax) { return createRegion(info, radius); }
 
-    public String createRegionWithFlags(StructureDatabase.StructureInfo info, int padding, Map<String, String> flags) {
+    public String createRegionWithFlags(StructureInfo info, int padding, Map<String, String> flags) {
         if (!worldGuardAvailable) return null;
         try {
             World bukkitWorld = Bukkit.getWorld(info.world);
@@ -66,7 +60,7 @@ public class RegionManager {
             BlockVector3 min = BlockVector3.at(info.minX - padding, minY, info.minZ - padding);
             BlockVector3 max = BlockVector3.at(info.maxX + padding, maxY, info.maxZ + padding);
             ProtectedCuboidRegion region = new ProtectedCuboidRegion(regionId, min, max);
-            applyFlags(region, flags);
+            RegionFlagService.applyFlags(region, flags);
             regionManager.addRegion(region);
             plugin.getDatabase().setRegionId(info.world, info.type, info.chunkX, info.chunkZ, regionId);
             plugin.getConfigManager().debug("Created BB region: " + regionId + " [" + min + " -> " + max + "]");
@@ -74,12 +68,9 @@ public class RegionManager {
         } catch (Exception e) { plugin.getLogger().warning("Failed to create region: " + e.getMessage()); return null; }
     }
 
-    @Deprecated
-    public String createRegionWithFlags(StructureDatabase.StructureInfo info, int radius, int yMin, int yMax, Map<String, String> flags) {
-        return createRegionWithFlags(info, radius, flags);
-    }
+    @Deprecated public String createRegionWithFlags(StructureInfo info, int radius, int yMin, int yMax, Map<String, String> flags) { return createRegionWithFlags(info, radius, flags); }
 
-    public boolean updateRegionBounds(StructureDatabase.StructureInfo info, int padding) {
+    public boolean updateRegionBounds(StructureInfo info, int padding) {
         if (!worldGuardAvailable) return false;
         try {
             World bukkitWorld = Bukkit.getWorld(info.world);
@@ -112,34 +103,7 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to update region bounds: " + e.getMessage()); return false; }
     }
-    
-    @SuppressWarnings("unchecked")
-    private void applyFlags(ProtectedRegion region, Map<String, String> flags) {
-        if (flags == null) return;
-        for (Map.Entry<String, String> entry : flags.entrySet()) {
-            String flagName = entry.getKey();
-            String flagValue = entry.getValue();
-            try {
-                FlagRegistry flagRegistry = WorldGuard.getInstance().getFlagRegistry();
-                Flag<?> flag = flagRegistry.get(flagName);
-                if (flag == null) flag = Flags.fuzzyMatchFlag(flagRegistry, flagName);
-                if (flag == null) { plugin.getConfigManager().debug("Unknown flag: " + flagName); continue; }
-                if (flag instanceof StateFlag) {
-                    StateFlag sf = (StateFlag) flag;
-                    if ("allow".equalsIgnoreCase(flagValue)) region.setFlag(sf, StateFlag.State.ALLOW);
-                    else if ("deny".equalsIgnoreCase(flagValue)) region.setFlag(sf, StateFlag.State.DENY);
-                } else {
-                    try {
-                        FlagContext context = FlagContext.create().setSender(com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapCommandSender(Bukkit.getConsoleSender())).setInput(flagValue).build();
-                        Object parsedValue = flag.parseInput(context);
-                        region.setFlag((Flag<Object>) flag, parsedValue);
-                        plugin.getConfigManager().debug("Set flag " + flagName + " = " + flagValue);
-                    } catch (Exception e) { plugin.getConfigManager().debug("Failed to parse flag " + flagName + ": " + e.getMessage()); }
-                }
-            } catch (Exception e) { plugin.getConfigManager().debug("Could not set flag " + flagName + ": " + e.getMessage()); }
-        }
-    }
-    
+
     public boolean removeRegion(String worldName, String regionId) {
         if (!worldGuardAvailable) return false;
         try {
@@ -152,16 +116,16 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to remove region: " + e.getMessage()); return false; }
     }
-    
+
     public int clearRegions(String pattern) {
         if (!worldGuardAvailable) return 0;
         int removed = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null && removeRegion(info.world, info.regionId)) removed++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null && removeRegion(info.world, info.regionId)) removed++;
         plugin.getDatabase().clearRegions(pattern);
         return removed;
     }
-    
+
     public int clearAllStructureGuardRegions() {
         if (!worldGuardAvailable) return 0;
         int removed = 0;
@@ -179,7 +143,7 @@ public class RegionManager {
         } catch (Exception e) { plugin.getLogger().warning("Failed to clear all regions: " + e.getMessage()); }
         return removed;
     }
-    
+
     public int clearAllStructureGuardRegionsInWorld(String worldName) {
         if (!worldGuardAvailable) return 0;
         int removed = 0;
@@ -196,25 +160,24 @@ public class RegionManager {
         } catch (Exception e) { plugin.getLogger().warning("Failed to clear regions in world: " + e.getMessage()); }
         return removed;
     }
-    
+
     public int clearRegionsInWorld(String pattern, String worldName) {
         if (!worldGuardAvailable) return 0;
         int removed = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null && info.world.equals(worldName)) if (removeRegion(info.world, info.regionId)) removed++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null && info.world.equals(worldName)) if (removeRegion(info.world, info.regionId)) removed++;
         plugin.getDatabase().clearRegions(pattern);
         return removed;
     }
-    
+
     public int setFlag(String pattern, String flagName, String value) {
         if (!worldGuardAvailable) return 0;
         int updated = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null) if (setRegionFlag(info.world, info.regionId, flagName, value)) updated++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null) if (setRegionFlag(info.world, info.regionId, flagName, value)) updated++;
         return updated;
     }
-    
-    @SuppressWarnings("unchecked")
+
     public boolean setRegionFlag(String worldName, String regionId, String flagName, String value) {
         if (!worldGuardAvailable) return false;
         try {
@@ -225,24 +188,10 @@ public class RegionManager {
             if (regionManager == null) return false;
             ProtectedRegion region = regionManager.getRegion(regionId);
             if (region == null) return false;
-            FlagRegistry flagRegistry = WorldGuard.getInstance().getFlagRegistry();
-            Flag<?> flag = flagRegistry.get(flagName);
-            if (flag == null) flag = Flags.fuzzyMatchFlag(flagRegistry, flagName);
-            if (flag == null) { plugin.getLogger().warning("Unknown flag: " + flagName); return false; }
-            if (value.equalsIgnoreCase("allow") && flag instanceof StateFlag) region.setFlag((StateFlag) flag, StateFlag.State.ALLOW);
-            else if (value.equalsIgnoreCase("deny") && flag instanceof StateFlag) region.setFlag((StateFlag) flag, StateFlag.State.DENY);
-            else if (value.equalsIgnoreCase("none") || value.equalsIgnoreCase("clear")) region.setFlag(flag, null);
-            else {
-                try {
-                    FlagContext context = FlagContext.create().setSender(com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapCommandSender(Bukkit.getConsoleSender())).setInput(value).build();
-                    Object parsedValue = flag.parseInput(context);
-                    region.setFlag((Flag<Object>) flag, parsedValue);
-                } catch (Exception e) { plugin.getLogger().warning("Invalid value '" + value + "' for flag " + flagName); return false; }
-            }
-            return true;
+            return RegionFlagService.setFlag(region, flagName, value);
         } catch (Exception e) { plugin.getLogger().warning("Failed to set flag: " + e.getMessage()); return false; }
     }
-    
+
     public Map<String, String> getRegionFlags(String worldName, String regionId) {
         Map<String, String> flags = new LinkedHashMap<>();
         if (!worldGuardAvailable) return flags;
@@ -258,32 +207,7 @@ public class RegionManager {
         } catch (Exception e) { plugin.getLogger().warning("Failed to get flags: " + e.getMessage()); }
         return flags;
     }
-    
-    @SuppressWarnings("unchecked")
-    private void applyDefaultFlags(ProtectedRegion region) {
-        Map<String, String> defaultFlags = plugin.getConfigManager().getDefaultFlags();
-        for (Map.Entry<String, String> entry : defaultFlags.entrySet()) {
-            try {
-                FlagRegistry flagRegistry = WorldGuard.getInstance().getFlagRegistry();
-                Flag<?> flag = flagRegistry.get(entry.getKey());
-                if (flag == null) flag = Flags.fuzzyMatchFlag(flagRegistry, entry.getKey());
-                if (flag == null) { plugin.getConfigManager().debug("Unknown flag: " + entry.getKey()); continue; }
-                String value = entry.getValue();
-                if (flag instanceof StateFlag) {
-                    if (value.equalsIgnoreCase("allow")) region.setFlag((StateFlag) flag, StateFlag.State.ALLOW);
-                    else if (value.equalsIgnoreCase("deny")) region.setFlag((StateFlag) flag, StateFlag.State.DENY);
-                } else {
-                    try {
-                        FlagContext context = FlagContext.create().setSender(com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapCommandSender(Bukkit.getConsoleSender())).setInput(value).build();
-                        Object parsedValue = flag.parseInput(context);
-                        region.setFlag((Flag<Object>) flag, parsedValue);
-                        plugin.getConfigManager().debug("Set flag " + entry.getKey() + " = " + value);
-                    } catch (Exception e) { plugin.getConfigManager().debug("Failed to parse flag " + entry.getKey() + ": " + e.getMessage()); }
-                }
-            } catch (Exception e) { plugin.getConfigManager().debug("Failed to set default flag " + entry.getKey() + ": " + e.getMessage()); }
-        }
-    }
-    
+
     public ProtectedRegion getRegion(String worldName, String regionId) {
         if (!worldGuardAvailable) return null;
         try {
@@ -295,39 +219,39 @@ public class RegionManager {
             return regionManager.getRegion(regionId);
         } catch (Exception e) { return null; }
     }
-    
+
     public int addOwner(String pattern, String target) {
         if (!worldGuardAvailable) return 0;
         int updated = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null) if (addOwnerToRegion(info.world, info.regionId, target)) updated++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null) if (addOwnerToRegion(info.world, info.regionId, target)) updated++;
         return updated;
     }
-    
+
     public int removeOwner(String pattern, String target) {
         if (!worldGuardAvailable) return 0;
         int updated = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null) if (removeOwnerFromRegion(info.world, info.regionId, target)) updated++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null) if (removeOwnerFromRegion(info.world, info.regionId, target)) updated++;
         return updated;
     }
-    
+
     public int addMember(String pattern, String target) {
         if (!worldGuardAvailable) return 0;
         int updated = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null) if (addMemberToRegion(info.world, info.regionId, target)) updated++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null) if (addMemberToRegion(info.world, info.regionId, target)) updated++;
         return updated;
     }
-    
+
     public int removeMember(String pattern, String target) {
         if (!worldGuardAvailable) return 0;
         int updated = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
-        for (StructureDatabase.StructureInfo info : structures) if (info.regionId != null) if (removeMemberFromRegion(info.world, info.regionId, target)) updated++;
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures(pattern);
+        for (StructureInfo info : structures) if (info.regionId != null) if (removeMemberFromRegion(info.world, info.regionId, target)) updated++;
         return updated;
     }
-    
+
     private boolean addOwnerToRegion(String worldName, String regionId, String target) {
         try {
             ProtectedRegion region = getRegion(worldName, regionId);
@@ -337,7 +261,7 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to add owner: " + e.getMessage()); return false; }
     }
-    
+
     private boolean removeOwnerFromRegion(String worldName, String regionId, String target) {
         try {
             ProtectedRegion region = getRegion(worldName, regionId);
@@ -347,7 +271,7 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to remove owner: " + e.getMessage()); return false; }
     }
-    
+
     private boolean addMemberToRegion(String worldName, String regionId, String target) {
         try {
             ProtectedRegion region = getRegion(worldName, regionId);
@@ -357,7 +281,7 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to add member: " + e.getMessage()); return false; }
     }
-    
+
     private boolean removeMemberFromRegion(String worldName, String regionId, String target) {
         try {
             ProtectedRegion region = getRegion(worldName, regionId);
@@ -367,14 +291,14 @@ public class RegionManager {
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to remove member: " + e.getMessage()); return false; }
     }
-    
+
     @SuppressWarnings("unchecked")
     public void syncFromConfig() {
         if (!worldGuardAvailable) { plugin.getLogger().warning("WorldGuard not available - cannot sync regions"); return; }
         plugin.getLogger().info("Syncing region settings from config...");
         int updatedCount = 0; int errorCount = 0;
-        List<StructureDatabase.StructureInfo> structures = plugin.getDatabase().getProtectedStructures("");
-        for (StructureDatabase.StructureInfo info : structures) {
+        List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures("");
+        for (StructureInfo info : structures) {
             if (info.regionId == null) continue;
             try {
                 World bukkitWorld = Bukkit.getWorld(info.world);
@@ -384,39 +308,24 @@ public class RegionManager {
                 if (regionManager == null) continue;
                 ProtectedRegion region = regionManager.getRegion(info.regionId);
                 if (region == null) continue;
-                ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
+                ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
                 Map<String, String> flagsToApply;
                 if (rule != null && rule.flags != null && !rule.flags.isEmpty()) flagsToApply = rule.flags;
                 else flagsToApply = plugin.getConfigManager().getDefaultFlags();
-                for (Map.Entry<String, String> entry : flagsToApply.entrySet()) {
-                    try {
-                        FlagRegistry flagRegistry = WorldGuard.getInstance().getFlagRegistry();
-                        Flag<?> flag = flagRegistry.get(entry.getKey());
-                        if (flag == null) flag = Flags.fuzzyMatchFlag(flagRegistry, entry.getKey());
-                        if (flag == null) continue;
-                        if (flag instanceof StateFlag) {
-                            if (entry.getValue().equalsIgnoreCase("allow")) region.setFlag((StateFlag) flag, StateFlag.State.ALLOW);
-                            else if (entry.getValue().equalsIgnoreCase("deny")) region.setFlag((StateFlag) flag, StateFlag.State.DENY);
-                        } else {
-                            FlagContext context = FlagContext.create().setSender(com.sk89q.worldguard.bukkit.WorldGuardPlugin.inst().wrapCommandSender(Bukkit.getConsoleSender())).setInput(entry.getValue()).build();
-                            Object parsedValue = flag.parseInput(context);
-                            region.setFlag((Flag<Object>) flag, parsedValue);
-                        }
-                    } catch (Exception e) { plugin.getConfigManager().debug("Failed to set flag " + entry.getKey() + " on " + info.regionId + ": " + e.getMessage()); }
-                }
+                for (Map.Entry<String, String> entry : flagsToApply.entrySet()) RegionFlagService.setFlag(region, entry.getKey(), entry.getValue());
                 updatedCount++;
             } catch (Exception e) { errorCount++; }
         }
         plugin.getLogger().info("Synced " + updatedCount + " regions from config" + (errorCount > 0 ? " (" + errorCount + " errors)" : ""));
         protectUnprotectedStructures();
     }
-    
+
     public int protectUnprotectedStructures() {
         if (!worldGuardAvailable) return 0;
         int createdCount = 0;
-        List<StructureDatabase.StructureInfo> unprotected = plugin.getDatabase().getUnprotectedStructures("");
-        for (StructureDatabase.StructureInfo info : unprotected) {
-            ConfigManager.ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
+        List<StructureInfo> unprotected = plugin.getDatabase().getUnprotectedStructures("");
+        for (StructureInfo info : unprotected) {
+            ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
             if (rule == null || !rule.enabled) continue;
             if (plugin.getConfigManager().isWorldDisabled(info.world)) continue;
             try {
@@ -427,12 +336,12 @@ public class RegionManager {
         if (createdCount > 0) plugin.getLogger().info("Created " + createdCount + " new regions for previously discovered structures");
         return createdCount;
     }
-    
+
     public List<String> getAvailableFlags() {
         List<String> flags = new ArrayList<>();
         if (!worldGuardAvailable) return flags;
         try {
-            FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
+            com.sk89q.worldguard.protection.flags.registry.FlagRegistry registry = WorldGuard.getInstance().getFlagRegistry();
             for (Flag<?> flag : registry.getAll()) flags.add(flag.getName());
             Collections.sort(flags);
         } catch (Exception e) {

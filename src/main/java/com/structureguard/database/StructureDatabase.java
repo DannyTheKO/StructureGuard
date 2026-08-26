@@ -1,28 +1,28 @@
-package com.structureguard;
+package com.structureguard.database;
+
+import com.structureguard.StructureGuardPlugin;
+import com.structureguard.database.model.StructureInfo;
 
 import java.sql.*;
 import java.util.*;
 
 public class StructureDatabase {
-    
     private final StructureGuardPlugin plugin;
     private Connection connection;
     private final Object dbLock = new Object();
-    
+
     public StructureDatabase(StructureGuardPlugin plugin) {
         this.plugin = plugin;
         initialize();
     }
-    
+
     private void initialize() {
         try {
             String dbPath = plugin.getDataFolder().getAbsolutePath() + "/structures.db";
             connection = DriverManager.getConnection("jdbc:sqlite:" + dbPath);
-            
             try (Statement stmt = connection.createStatement()) {
                 stmt.executeUpdate("DROP TABLE IF EXISTS structures");
                 stmt.executeUpdate("DROP TABLE IF EXISTS scanned_chunks");
-
                 stmt.executeUpdate(
                     "CREATE TABLE structures (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT," +
@@ -40,7 +40,6 @@ public class StructureDatabase {
                     "region_id TEXT," +
                     "UNIQUE(world, structure_type, chunk_x, chunk_z))"
                 );
-                
                 stmt.executeUpdate(
                     "CREATE TABLE scanned_chunks (" +
                     "world TEXT NOT NULL," +
@@ -49,20 +48,17 @@ public class StructureDatabase {
                     "scanned_at INTEGER DEFAULT (strftime('%s','now'))," +
                     "PRIMARY KEY(world, chunk_x, chunk_z))"
                 );
-                
                 stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_type ON structures(structure_type)");
                 stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_world ON structures(world)");
                 stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_region ON structures(region_id)");
                 stmt.executeUpdate("CREATE INDEX IF NOT EXISTS idx_chunk ON structures(chunk_x, chunk_z)");
             }
-            
             plugin.getLogger().info("Structure database initialized (1.21 BB schema)");
-            
         } catch (SQLException e) {
             plugin.getLogger().severe("Failed to initialize database: " + e.getMessage());
         }
     }
-    
+
     public boolean addStructure(String world, String structureType, int minX, int minZ, int maxX, int maxZ, int minY, int maxY, int chunkX, int chunkZ) {
         synchronized (dbLock) {
             try (PreparedStatement stmt = connection.prepareStatement(
@@ -127,16 +123,14 @@ public class StructureDatabase {
             return null;
         }
     }
-    
+
     public int addStructuresBatch(String world, List<StructureInfo> structures) {
         if (structures == null || structures.isEmpty()) return 0;
-        
         synchronized (dbLock) {
             int inserted = 0;
             try {
                 boolean wasAutoCommit = connection.getAutoCommit();
                 if (wasAutoCommit) connection.setAutoCommit(false);
-                
                 try (PreparedStatement stmt = connection.prepareStatement(
                     "INSERT OR IGNORE INTO structures (world, structure_type, min_x, min_z, max_x, max_z, min_y, max_y, chunk_x, chunk_z) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 )) {
@@ -153,24 +147,20 @@ public class StructureDatabase {
                         stmt.setInt(10, s.chunkZ);
                         stmt.addBatch();
                     }
-                    
                     int[] results = stmt.executeBatch();
                     for (int r : results) if (r > 0) inserted++;
                     connection.commit();
                 } finally {
                     if (wasAutoCommit) connection.setAutoCommit(true);
                 }
-                
             } catch (SQLException e) {
                 plugin.getLogger().warning("Failed batch insert: " + e.getMessage());
-                try {
-                    if (!connection.getAutoCommit()) { connection.rollback(); connection.setAutoCommit(true); }
-                } catch (SQLException e2) {}
+                try { if (!connection.getAutoCommit()) { connection.rollback(); connection.setAutoCommit(true); } } catch (SQLException e2) {}
             }
             return inserted;
         }
     }
-    
+
     public boolean isChunkScanned(String world, int chunkX, int chunkZ) {
         synchronized (dbLock) {
             try (PreparedStatement stmt = connection.prepareStatement(
@@ -183,7 +173,7 @@ public class StructureDatabase {
             } catch (SQLException e) { return false; }
         }
     }
-    
+
     public Set<Long> getScannedChunks(String world) {
         Set<Long> scanned = new HashSet<>();
         synchronized (dbLock) {
@@ -205,7 +195,7 @@ public class StructureDatabase {
         }
         return scanned;
     }
-    
+
     public void markChunksScanned(String world, List<int[]> chunks) {
         if (chunks == null || chunks.isEmpty()) return;
         synchronized (dbLock) {
@@ -230,7 +220,7 @@ public class StructureDatabase {
             }
         }
     }
-    
+
     public int clearScannedChunks(String world) {
         try {
             PreparedStatement stmt = connection.prepareStatement("DELETE FROM scanned_chunks WHERE world = ?");
@@ -238,7 +228,7 @@ public class StructureDatabase {
             return stmt.executeUpdate();
         } catch (SQLException e) { plugin.getLogger().warning("Failed to clear scanned chunks: " + e.getMessage()); return 0; }
     }
-    
+
     public int clearWorld(String world) {
         try {
             PreparedStatement stmt = connection.prepareStatement("DELETE FROM structures WHERE world = ?");
@@ -246,7 +236,7 @@ public class StructureDatabase {
             return stmt.executeUpdate();
         } catch (SQLException e) { plugin.getLogger().warning("Failed to clear world structures: " + e.getMessage()); return 0; }
     }
-    
+
     public int getScannedChunkCount(String world) {
         try {
             PreparedStatement stmt = connection.prepareStatement("SELECT COUNT(*) FROM scanned_chunks WHERE world = ?");
@@ -256,7 +246,7 @@ public class StructureDatabase {
         } catch (SQLException e) {}
         return 0;
     }
-    
+
     public void setRegionId(String world, String structureType, int chunkX, int chunkZ, String regionId) {
         try {
             PreparedStatement stmt = connection.prepareStatement(
@@ -270,7 +260,7 @@ public class StructureDatabase {
             stmt.executeUpdate();
         } catch (SQLException e) { plugin.getLogger().warning("Failed to update region: " + e.getMessage()); }
     }
-    
+
     public int clearRegions(String pattern) {
         try {
             PreparedStatement stmt = connection.prepareStatement(
@@ -293,7 +283,7 @@ public class StructureDatabase {
             rs.getString("region_id")
         );
     }
-    
+
     public List<StructureInfo> getStructures(String pattern) {
         List<StructureInfo> results = new ArrayList<>();
         try {
@@ -306,7 +296,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to query structures: " + e.getMessage()); }
         return results;
     }
-    
+
     public List<StructureInfo> getUnprotectedStructures(String pattern) {
         List<StructureInfo> results = new ArrayList<>();
         try {
@@ -319,7 +309,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to query unprotected structures: " + e.getMessage()); }
         return results;
     }
-    
+
     public List<StructureInfo> getProtectedStructures(String pattern) {
         List<StructureInfo> results = new ArrayList<>();
         try {
@@ -332,7 +322,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to query protected structures: " + e.getMessage()); }
         return results;
     }
-    
+
     public StructureInfo getNearestStructure(String world, int x, int z, int maxRadius) {
         try {
             PreparedStatement stmt = connection.prepareStatement(
@@ -347,7 +337,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to find nearest structure: " + e.getMessage()); }
         return null;
     }
-    
+
     public Set<String> getStructureTypes() {
         Set<String> types = new TreeSet<>();
         try {
@@ -357,7 +347,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to get structure types: " + e.getMessage()); }
         return types;
     }
-    
+
     public List<StructureInfo> getStructuresOfType(String world, String structureType) {
         List<StructureInfo> results = new ArrayList<>();
         try {
@@ -375,7 +365,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to get structures of type: " + e.getMessage()); }
         return results;
     }
-    
+
     public int getCount(String pattern) {
         try {
             PreparedStatement stmt = connection.prepareStatement("SELECT COUNT(*) FROM structures WHERE structure_type LIKE ?");
@@ -385,7 +375,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to count structures: " + e.getMessage()); }
         return 0;
     }
-    
+
     public int getTotalCount() {
         try {
             Statement stmt = connection.createStatement();
@@ -394,7 +384,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to count total structures: " + e.getMessage()); }
         return 0;
     }
-    
+
     public int getProtectedCount() {
         try {
             Statement stmt = connection.createStatement();
@@ -403,7 +393,7 @@ public class StructureDatabase {
         } catch (SQLException e) { plugin.getLogger().warning("Failed to count protected structures: " + e.getMessage()); }
         return 0;
     }
-    
+
     public boolean hasStructure(String world, String structureType, int chunkX, int chunkZ) {
         try {
             PreparedStatement stmt = connection.prepareStatement(
@@ -414,7 +404,7 @@ public class StructureDatabase {
             return rs.next();
         } catch (SQLException e) { return false; }
     }
-    
+
     public boolean isStructureProtected(String world, String structureType, int chunkX, int chunkZ) {
         try {
             PreparedStatement stmt = connection.prepareStatement(
@@ -426,7 +416,7 @@ public class StructureDatabase {
         } catch (SQLException e) {}
         return false;
     }
-    
+
     public void reset() {
         try {
             Statement stmt = connection.createStatement();
@@ -435,44 +425,8 @@ public class StructureDatabase {
             plugin.getLogger().info("Database reset");
         } catch (SQLException e) { plugin.getLogger().warning("Failed to reset database: " + e.getMessage()); }
     }
-    
+
     public void close() {
         try { if (connection != null && !connection.isClosed()) connection.close(); } catch (SQLException e) {}
-    }
-    
-    public static class StructureInfo {
-        public final String world;
-        public final String type;
-        public final int minX;
-        public final int minZ;
-        public final int maxX;
-        public final int maxZ;
-        public final int minY;
-        public final int maxY;
-        public final int chunkX;
-        public final int chunkZ;
-        public final boolean hasRegion;
-        public final String regionId;
-
-        public StructureInfo(String world, String type, int minX, int minZ, int maxX, int maxZ, int minY, int maxY, int chunkX, int chunkZ, boolean hasRegion, String regionId) {
-            this.world = world; this.type = type;
-            this.minX = minX; this.minZ = minZ; this.maxX = maxX; this.maxZ = maxZ;
-            this.minY = minY; this.maxY = maxY;
-            this.chunkX = chunkX; this.chunkZ = chunkZ;
-            this.hasRegion = hasRegion; this.regionId = regionId;
-        }
-
-        public int getCenterX() { return (minX + maxX) / 2; }
-        public int getCenterZ() { return (minZ + maxZ) / 2; }
-        public int getCenterY() { return (minY + maxY) / 2; }
-
-        public boolean isLargerThan(StructureInfo other) {
-            return minX < other.minX || maxX > other.maxX || minZ < other.minZ || maxZ > other.maxZ || minY < other.minY || maxY > other.maxY;
-        }
-
-        public String generateRegionId() {
-            String safeName = type.replace(":", "_").replace("/", "_");
-            return "sg_" + safeName + "_" + chunkX + "_" + chunkZ;
-        }
     }
 }
