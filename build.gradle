@@ -30,7 +30,7 @@ dependencies {
 
 jar {
 	archiveBaseName = 'StructureGuard'
-	archiveVersion = ''
+	archiveVersion = project.version.toString()
 }
 
 def targetJavaVersion = 21
@@ -54,7 +54,7 @@ processResources {
 
 shadowJar {
 	archiveBaseName = 'StructureGuard'
-	archiveVersion = ''
+	archiveVersion = project.version.toString()
 	archiveClassifier.set('')
 }
 

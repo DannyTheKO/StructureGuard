@@ -1,25 +1,28 @@
-# StructureGuard
+# StructureGuard `1.2.0`
 
 **Automatic WorldGuard protection for ANY structure — vanilla, modded, or datapack.**
+
+> 1.21+ BoundingBox-accurate | On-demand chunk-load protection | Zero-lag async detection
 
 ## Features
 
 - 🎯 **On-Demand Protection** — Structures protected when chunks load, no scanning required
+- 📦 **BoundingBox Mode** — Region = structure BB expanded by `padding` on all sides (Y clamped to world height)
 - 🌍 **Universal Compatibility** — Paper, Spigot, Folia, NeoForge, Fabric hybrid servers
 - 🎨 **Pattern Matching** — Protect `minecraft:*`, `cobblemon:*_gym`, or just `*` for everything
-- ⚡ **Zero Lag** — Async detection, sync region creation
+- ⚡ **Zero Lag** — Async NMS detection, sync region creation, batched DB writes
 - 🔧 **Full WorldGuard Integration** — All flags supported, including Extra Flags
 
 ## Quick Start
 
 ```bash
-# Install WorldGuard, drop StructureGuard in /plugins/, restart
+# Install WorldGuard, drop StructureGuard-1.2.0.jar in /plugins/, restart
 
-# Protect all villages with 64-block radius
-/sg protect minecraft:village 64
+# Protect all villages with 5-block padding
+/sg protect minecraft:village 5
 
 # Protect ALL structures
-/sg protect * 48
+/sg protect * 5
 
 # Set flags
 /sg flag minecraft:village pvp deny
@@ -33,16 +36,18 @@
 ### Discovery
 | Command | Description |
 |---------|-------------|
-| `/sg listall` | Show all structure types in registry |
-| `/sg find <structure>` | Locate nearest structure |
-| `/sg info` | Structure info at your location |
+| `/sg listall [page]` | Show all structure types in registry |
+| `/sg find <structure>` | Locate nearest structure (live scan + DB fallback) |
+| `/sg info` | Structure info (BB) at your location |
+| `/sg probe [chunkX chunkZ]` | Verbose NMS probe for a chunk |
+| `/sg methods` | Dump chunk Map methods (diagnostic) |
 
 ### Protection Rules
 | Command | Description |
 |---------|-------------|
-| `/sg protect <pattern> [radius] [ymin] [ymax]` | Add protection rule |
+| `/sg protect <pattern> [padding]` | Add protection rule (BB + padding) |
 | `/sg unprotect <pattern> [--clear]` | Remove rule (--clear removes regions) |
-| `/sg enable <pattern>` | Enable disabled rule |
+| `/sg enable <pattern> [padding]` | Enable / create rule |
 | `/sg disable <pattern>` | Disable rule (keeps in config) |
 | `/sg rules` | List all rules |
 
@@ -54,14 +59,14 @@
 | `/sg addmember <pattern> <player\|g:group>` | Add region member |
 | `/sg removeowner <pattern> <player\|g:group>` | Remove region owner |
 | `/sg removemember <pattern> <player\|g:group>` | Remove region member |
-| `/sg clearregions <pattern> [world]` | Remove WorldGuard regions |
-| `/sg resetworld <world>` | Clear all data for a world (for resets) |
+| `/sg clearregions <pattern> [world]` | Remove WorldGuard regions (`*` = all `sg_*`) |
+| `/sg resetworld <world> confirm` | Clear all data for a world (for resets) |
 
 ### Utility
 | Command | Description |
 |---------|-------------|
-| `/sg list <pattern>` | List protected structures |
-| `/sg status` | System status |
+| `/sg list <pattern> [page]` | List protected structures (DB) |
+| `/sg status` | System status (WorldGuard, rules, DB, chunk queue, debug) |
 | `/sg reload` | Reload config and sync flags to existing regions |
 | `/sg debug` | Toggle debug mode |
 
@@ -74,20 +79,16 @@
 | `cobblemon:*_gym` | All Cobblemon gyms |
 | `*` | Everything |
 
-## Configuration
+## Configuration (`src/main/resources/config.yml`)
 
 ```yaml
-# Default protection settings
-default-radius: 48
-default-y-min: -64
-default-y-max: 320
-
-# Worlds where protection is disabled (e.g., resource worlds)
+debug: false
+process-existing-chunks: true
 disabled-worlds:
-  - resource_world
-  - mining_world
+  # - resource_world
 
-# Default flags for new regions
+default-padding: 5
+
 default-flags:
   use: allow
   interact: allow
@@ -95,13 +96,14 @@ default-flags:
   tnt: deny
   deny-message: "&cThis structure is protected!"
 
-# Protection rules (managed via /sg protect)
+# Managed via /sg protect — region = BB expanded by padding
 protected-structures:
-  minecraft_village:
-    enabled: true
-    radius: 64
-    flags:
-      block-break: deny
+  # "minecraft:village":
+  #   enabled: true
+  #   padding: 5
+  #   priority: 10
+  #   flags:
+  #     pvp: deny
 ```
 
 ### Config Sync
@@ -110,23 +112,50 @@ Edit flags in `config.yml` then run `/sg reload` to apply changes to all existin
 
 ### Disabled Worlds
 
-Add world names to `disabled-worlds` to completely skip structure protection in those worlds. Useful for:
-- Resource worlds that reset periodically
-- Creative/build worlds
-- Mining dimensions
+Add world names to `disabled-worlds` to completely skip protection in those worlds (resource/mining/creative worlds).
 
 ## Permissions
 
-| Permission | Description |
-|------------|-------------|
-| `structureguard.admin` | All commands |
-| `structureguard.find` | Use /sg find |
-| `structureguard.listall` | Use /sg listall |
-| `structureguard.teleport` | Clickable teleport links |
+| Permission | Description | Default |
+|------------|-------------|---------|
+| `structureguard.admin` | All commands | op |
+| `structureguard.find` | Use /sg find | op |
+| `structureguard.listall` | Use /sg listall | false |
+| `structureguard.info` | Use /sg info | false |
+| `structureguard.teleport` | Clickable teleport links | op |
+| `structureguard.helper` | Read-only (find/list/listall/info) | false |
+| `structureguard.moderator` | helper + scan/protect/flag/teleport | false |
+
+## Project Structure (`1.2.0` modular layout)
+
+```
+src/main/java/com/structureguard/
+├── StructureGuardPlugin.java
+├── config/          ConfigManager, ProtectionRule
+├── database/        StructureDatabase + model/StructureInfo
+├── structure/       StructureFinder + model/{StructureResult,ScanState} + nms/NmsReflectionCache
+├── region/          RegionManager, RegionFlagService
+├── listener/        ChunkLoadListener
+├── command/         SgCommand (router) + SgSubCommand + subcommand/* (19 per-file commands)
+└── util/            PatternMatcher, ChunkUtil
+```
+
+## Build
+
+```bash
+# Windows
+BUILD.bat
+# or
+./gradlew clean shadowJar
+
+# Output: build/libs/StructureGuard-1.2.0.jar
+```
+
+Version is defined in `build.gradle` (`version = '1.2.0'`) and injected into `plugin.yml` (`${version}`) at build time. The JAR is now versioned (`StructureGuard-1.2.0.jar`) for clean release tracking.
 
 ## Requirements
 
-- Minecraft 1.20.x - 1.21.x
+- Minecraft 1.21+
 - WorldGuard 7.0+
 - Java 21+
 
