@@ -2,6 +2,7 @@
 # StructureGuard Configuration — 1.21+ BoundingBox Mode
 # =============================================================================
 debug: false
+log-auto-protect: true
 process-existing-chunks: true
 
 # World filtering — pick ONE mode:

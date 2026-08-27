@@ -14,6 +14,7 @@ import java.util.Set;
 public class ConfigManager {
     private final StructureGuardPlugin plugin;
     private boolean debugMode;
+    private boolean logAutoProtect;
     private int defaultPadding;
     private boolean processExistingChunks;
     private Map<String, String> defaultFlags;
@@ -29,6 +30,7 @@ public class ConfigManager {
     private void loadConfig() {
         FileConfiguration config = plugin.getConfig();
         debugMode = config.getBoolean("debug", false);
+        logAutoProtect = config.getBoolean("log-auto-protect", true);
         if (config.contains("default-padding")) defaultPadding = config.getInt("default-padding", 5);
         else if (config.contains("default-radius")) defaultPadding = config.getInt("default-radius", 5);
         else defaultPadding = config.getInt("default-padding", 5);
@@ -140,6 +142,7 @@ public class ConfigManager {
     public void debug(String message) { if (debugMode) plugin.getLogger().info("[DEBUG] " + message); }
     public boolean isDebugMode() { return debugMode; }
     public void setDebugMode(boolean debug) { this.debugMode = debug; plugin.getConfig().set("debug", debug); plugin.saveConfig(); }
+    public boolean isLogAutoProtect() { return logAutoProtect; }
     public int getDefaultPadding() { return defaultPadding; }
     @Deprecated public int getDefaultRadius() { return defaultPadding; }
     @Deprecated public int getDefaultYMin() { return -64; }

@@ -120,7 +120,7 @@ public class ChunkLoadListener implements Listener {
                         StructureInfo updated = new StructureInfo(world.getName(), structure.structureType, newMinX, newMinZ, newMaxX, newMaxZ, newMinY, newMaxY, structure.chunkX, structure.chunkZ, existing.hasRegion, existing.regionId);
                         plugin.getServer().getScheduler().runTask(plugin, () -> {
                             boolean expanded = plugin.getRegionManager().updateRegionBounds(updated, rule.padding);
-                            if (expanded) plugin.getLogger().info("Expanded " + structure.structureType + " [" + existing.minX + "," + existing.minZ + " -> " + existing.maxX + "," + existing.maxZ + "] => [" + newMinX + "," + newMinZ + " -> " + newMaxX + "," + newMaxZ + "]");
+                            if (expanded && plugin.getConfigManager().isLogAutoProtect()) plugin.getLogger().info("Expanded " + structure.structureType + " [" + existing.minX + "," + existing.minZ + " -> " + existing.maxX + "," + existing.maxZ + "] => [" + newMinX + "," + newMinZ + " -> " + newMaxX + "," + newMaxZ + "]");
                         });
                     } else {
                         plugin.getConfigManager().debug("    Already in DB with same or larger BB");
@@ -138,7 +138,7 @@ public class ChunkLoadListener implements Listener {
             plugin.getDatabase().addStructure(world.getName(), structure.structureType, structure.minX, structure.minZ, structure.maxX, structure.maxZ, structure.minY, structure.maxY, structure.chunkX, structure.chunkZ);
             StructureInfo dbInfo = new StructureInfo(world.getName(), structure.structureType, structure.minX, structure.minZ, structure.maxX, structure.maxZ, structure.minY, structure.maxY, structure.chunkX, structure.chunkZ, false, null);
             String regionId = plugin.getRegionManager().createRegionWithFlags(dbInfo, rule.padding, rule.flags);
-            if (regionId != null) { protectedStructureCount.incrementAndGet(); plugin.getLogger().info("Auto-protected " + structure.structureType + " [" + structure.minX + "," + structure.minZ + " -> " + structure.maxX + "," + structure.maxZ + "] Y" + structure.minY + "->" + structure.maxY + " -> " + regionId); }
+            if (regionId != null) { protectedStructureCount.incrementAndGet(); if (plugin.getConfigManager().isLogAutoProtect()) plugin.getLogger().info("Auto-protected " + structure.structureType + " [" + structure.minX + "," + structure.minZ + " -> " + structure.maxX + "," + structure.maxZ + "] Y" + structure.minY + "->" + structure.maxY + " -> " + regionId); }
         } catch (Exception e) { plugin.getLogger().warning("Failed to create protection for " + structure.structureType + ": " + e.getMessage()); e.printStackTrace(); }
     }
 

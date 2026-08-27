@@ -330,10 +330,10 @@ public class RegionManager {
             if (!plugin.getConfigManager().isWorldAllowed(info.world)) continue;
             try {
                 String regionId = createRegionWithFlags(info, rule.padding, rule.flags);
-                if (regionId != null) { createdCount++; plugin.getLogger().info("Auto-protected " + info.type + " [" + info.minX + "," + info.minZ + " -> " + info.maxX + "," + info.maxZ + "] -> " + regionId); }
+                if (regionId != null) { createdCount++; if (plugin.getConfigManager().isLogAutoProtect()) plugin.getLogger().info("Auto-protected " + info.type + " [" + info.minX + "," + info.minZ + " -> " + info.maxX + "," + info.maxZ + "] -> " + regionId); }
             } catch (Exception e) { plugin.getConfigManager().debug("Failed to protect " + info.type + ": " + e.getMessage()); }
         }
-        if (createdCount > 0) plugin.getLogger().info("Created " + createdCount + " new regions for previously discovered structures");
+        if (createdCount > 0 && plugin.getConfigManager().isLogAutoProtect()) plugin.getLogger().info("Created " + createdCount + " new regions for previously discovered structures");
         return createdCount;
     }
 
