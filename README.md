@@ -1,4 +1,4 @@
-# StructureGuard `1.2.1`
+# StructureGuard `1.2.4`
 
 **Automatic WorldGuard protection for ANY structure — vanilla, modded, or datapack.**
 
@@ -68,7 +68,7 @@
 |---------|-------------|
 | `/sg list <pattern> [page]` | List protected structures (DB) |
 | `/sg status` | System status (WorldGuard, rules, DB, chunk queue, debug) |
-| `/sg reload` | Reload config and sync flags to existing regions |
+| `/sg reload` | Reload config and sync flags + padding (shrink/expand) to existing regions |
 | `/sg debug` | Toggle debug mode |
 
 ## Pattern Examples
@@ -109,7 +109,7 @@ protected-structures:
 
 ### Config Sync
 
-Edit flags in `config.yml` then run `/sg reload` to apply changes to all existing regions. No need to recreate regions!
+Edit flags/padding in `config.yml` then run `/sg reload` to apply changes to all existing regions (resizes BB ± padding, shrink & expand). No need to recreate regions!
 
 ### Disabled Worlds
 
@@ -175,6 +175,8 @@ Version is defined in `build.gradle` (`version = '1.2.1'`) and injected into `pl
 
 ## Changelog
 
+- **1.2.4** — Fix `/sg reload` to resize regions on padding change (shrink & expand)
+- **1.2.3** — Add log-auto-protect toggle
 - **1.2.1** — Smart tab completion (pattern presets, flag/world/padding completion), versioned JAR fix
 - **1.2.0** — Modular package structure, BoundingBox mode, on-demand protection
 

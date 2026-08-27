@@ -87,19 +87,15 @@ public class RegionManager {
             BlockVector3 newMax = BlockVector3.at(info.maxX + padding, maxY, info.maxZ + padding);
             BlockVector3 oldMin = existing.getMinimumPoint();
             BlockVector3 oldMax = existing.getMaximumPoint();
-            boolean needsExpand = newMin.getBlockX() < oldMin.getBlockX() || newMin.getBlockY() < oldMin.getBlockY() || newMin.getBlockZ() < oldMin.getBlockZ()
-                               || newMax.getBlockX() > oldMax.getBlockX() || newMax.getBlockY() > oldMax.getBlockY() || newMax.getBlockZ() > oldMax.getBlockZ();
-            if (!needsExpand) return false;
-            BlockVector3 finalMin = BlockVector3.at(Math.min(oldMin.getBlockX(), newMin.getBlockX()), Math.min(oldMin.getBlockY(), newMin.getBlockY()), Math.min(oldMin.getBlockZ(), newMin.getBlockZ()));
-            BlockVector3 finalMax = BlockVector3.at(Math.max(oldMax.getBlockX(), newMax.getBlockX()), Math.max(oldMax.getBlockY(), newMax.getBlockY()), Math.max(oldMax.getBlockZ(), newMax.getBlockZ()));
-            ProtectedCuboidRegion replacement = new ProtectedCuboidRegion(existing.getId(), finalMin, finalMax);
+            if (newMin.equals(oldMin) && newMax.equals(oldMax)) return false;
+            ProtectedCuboidRegion replacement = new ProtectedCuboidRegion(existing.getId(), newMin, newMax);
             replacement.setFlags(existing.getFlags());
             replacement.setOwners(existing.getOwners());
             replacement.setMembers(existing.getMembers());
             replacement.setPriority(existing.getPriority());
             regionManager.removeRegion(existing.getId());
             regionManager.addRegion(replacement);
-            plugin.getConfigManager().debug("Expanded region " + existing.getId() + " to [" + finalMin + " -> " + finalMax + "]");
+            plugin.getConfigManager().debug("Resized region " + existing.getId() + " [" + oldMin + " -> " + oldMax + "] to [" + newMin + " -> " + newMax + "]");
             return true;
         } catch (Exception e) { plugin.getLogger().warning("Failed to update region bounds: " + e.getMessage()); return false; }
     }
@@ -296,7 +292,7 @@ public class RegionManager {
     public void syncFromConfig() {
         if (!worldGuardAvailable) { plugin.getLogger().warning("WorldGuard not available - cannot sync regions"); return; }
         plugin.getLogger().info("Syncing region settings from config...");
-        int updatedCount = 0; int errorCount = 0;
+        int updatedCount = 0; int resizedCount = 0; int errorCount = 0;
         List<StructureInfo> structures = plugin.getDatabase().getProtectedStructures("");
         for (StructureInfo info : structures) {
             if (info.regionId == null) continue;
@@ -309,6 +305,27 @@ public class RegionManager {
                 ProtectedRegion region = regionManager.getRegion(info.regionId);
                 if (region == null) continue;
                 ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
+                int padding = rule != null ? rule.padding : plugin.getConfigManager().getDefaultPadding();
+                if (region instanceof ProtectedCuboidRegion) {
+                    int minY = Math.max(worldMinY(bukkitWorld), info.minY - padding);
+                    int maxY = Math.min(worldMaxY(bukkitWorld), info.maxY + padding);
+                    BlockVector3 newMin = BlockVector3.at(info.minX - padding, minY, info.minZ - padding);
+                    BlockVector3 newMax = BlockVector3.at(info.maxX + padding, maxY, info.maxZ + padding);
+                    if (!newMin.equals(region.getMinimumPoint()) || !newMax.equals(region.getMaximumPoint())) {
+                        ProtectedCuboidRegion replacement = new ProtectedCuboidRegion(region.getId(), newMin, newMax);
+                        replacement.setFlags(region.getFlags());
+                        replacement.setOwners(region.getOwners());
+                        replacement.setMembers(region.getMembers());
+                        replacement.setPriority(rule != null ? rule.priority : region.getPriority());
+                        regionManager.removeRegion(region.getId());
+                        regionManager.addRegion(replacement);
+                        region = replacement;
+                        resizedCount++;
+                        plugin.getConfigManager().debug("Resized region " + info.regionId + " to [" + newMin + " -> " + newMax + "] (padding=" + padding + ")");
+                    } else if (rule != null) {
+                        region.setPriority(rule.priority);
+                    }
+                }
                 Map<String, String> flagsToApply;
                 if (rule != null && rule.flags != null && !rule.flags.isEmpty()) flagsToApply = rule.flags;
                 else flagsToApply = plugin.getConfigManager().getDefaultFlags();
@@ -316,7 +333,7 @@ public class RegionManager {
                 updatedCount++;
             } catch (Exception e) { errorCount++; }
         }
-        plugin.getLogger().info("Synced " + updatedCount + " regions from config" + (errorCount > 0 ? " (" + errorCount + " errors)" : ""));
+        plugin.getLogger().info("Synced " + updatedCount + " regions from config (" + resizedCount + " resized)" + (errorCount > 0 ? " (" + errorCount + " errors)" : ""));
         protectUnprotectedStructures();
     }
 
