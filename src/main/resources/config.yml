@@ -58,74 +58,74 @@ protected-structures:
         padding: 10
         priority: 10
         flags:
-          block-break: allow
-          block-place: allow
-          use: allow
-          interact: allow
-          damage-animals: allow
-          pvp: deny
-          sleep: deny
-          respawn-anchors: deny
-          tnt: allow
-          chest-access: allow
-          vehicle-place: allow
-          vehicle-detroy: allow
-          ligher: allow
-          ride: allow
-          potion-splash: allow
-          item-frame-rotation: allow
-          block-trampling: allow
-          firework-damage: allow
-          use-anvil: deny
-          use-dripleaf: allow
-          wind-charge-burst: allow
-          breeze-charge-explosion: deny
-          pistons: deny
-          fire-spread: deny
-          lava-fire: deny
-          ice-melt: deny
-          ice-form: deny
-          frosted-ice-melt: deny
-          frosted-ice-form: deny
-          rr-block-regen: ~.*:10
-          rr-temp-build: allow
+            block-break: allow
+            block-place: allow
+            use: allow
+            interact: allow
+            damage-animals: allow
+            pvp: deny
+            sleep: deny
+            respawn-anchors: deny
+            tnt: allow
+            chest-access: allow
+            vehicle-place: allow
+            vehicle-detroy: allow
+            ligher: allow
+            ride: allow
+            potion-splash: allow
+            item-frame-rotation: allow
+            block-trampling: allow
+            firework-damage: allow
+            use-anvil: deny
+            use-dripleaf: allow
+            wind-charge-burst: allow
+            breeze-charge-explosion: deny
+            pistons: deny
+            fire-spread: deny
+            lava-fire: deny
+            ice-melt: deny
+            ice-form: deny
+            frosted-ice-melt: deny
+            frosted-ice-form: deny
+            rr-block-regen: ~.*:10
+            rr-temp-build: allow
 
     'minecraft:mansion':
         enabled: true
         padding: 50
         priority: 11
         flags:
-          block-break: allow
-          block-place: allow
-          use: allow
-          interact: allow
-          damage-animals: allow
-          pvp: deny
-          sleep: deny
-          respawn-anchors: deny
-          tnt: allow
-          chest-access: allow
-          vehicle-place: allow
-          vehicle-detroy: allow
-          ligher: allow
-          ride: allow
-          potion-splash: allow
-          item-frame-rotation: allow
-          block-trampling: allow
-          firework-damage: allow
-          use-anvil: deny
-          use-dripleaf: allow
-          wind-charge-burst: allow
-          breeze-charge-explosion: deny
-          pistons: deny
-          fire-spread: deny
-          lava-fire: deny
-          ice-melt: deny
-          ice-form: deny
-          frosted-ice-melt: deny
-          frosted-ice-form: deny
-          rr-block-regen: ~.*:10
-          rr-temp-build: allow
+            block-break: allow
+            block-place: allow
+            use: allow
+            interact: allow
+            damage-animals: allow
+            pvp: deny
+            sleep: deny
+            respawn-anchors: deny
+            tnt: allow
+            chest-access: allow
+            vehicle-place: allow
+            vehicle-detroy: allow
+            ligher: allow
+            ride: allow
+            potion-splash: allow
+            item-frame-rotation: allow
+            block-trampling: allow
+            firework-damage: allow
+            use-anvil: deny
+            use-dripleaf: allow
+            wind-charge-burst: allow
+            breeze-charge-explosion: deny
+            pistons: deny
+            fire-spread: deny
+            lava-fire: deny
+            ice-melt: deny
+            ice-form: deny
+            frosted-ice-melt: deny
+            frosted-ice-form: deny
+            rr-block-regen: ~.*:10
+            rr-temp-build: allow
 # Add rules with /sg protect <pattern> [padding]
 
 # Permissions:
