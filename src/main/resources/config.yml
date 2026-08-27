@@ -6,7 +6,7 @@ process-existing-chunks: true
 disabled-worlds:
   # - resource_world
 
-default-padding: 5
+default-padding: 10
 
 default-flags:
   use: allow
