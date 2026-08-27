@@ -3,17 +3,42 @@
 # =============================================================================
 debug: false
 process-existing-chunks: true
-disabled-worlds:
-  # - resource_world
+# - resource_world
 
 default-padding: 10
 
 default-flags:
-  use: allow
-  interact: allow
-  creeper-explosion: deny
-  tnt: deny
-  deny-message: "&cThis structure is protected!"
+    block-break: allow
+    block-place: allow
+    use: allow
+    interact: allow
+    damage-animals: allow
+    pvp: deny
+    sleep: deny
+    respawn-anchors: deny
+    tnt: allow
+    chest-access: allow
+    vehicle-place: allow
+    vehicle-detroy: allow
+    ligher: allow
+    ride: allow
+    potion-splash: allow
+    item-frame-rotation: allow
+    block-trampling: allow
+    firework-damage: allow
+    use-anvil: deny
+    use-dripleaf: allow
+    wind-charge-burst: allow
+    breeze-charge-explosion: deny
+    pistons: deny
+    fire-spread: deny
+    lava-fire: deny
+    ice-melt: deny
+    ice-form: deny
+    frosted-ice-melt: deny
+    frosted-ice-form: deny
+    rr-block-regen: ~.*:10
+    rr-temp-build: allow
 
 # Protection Rules — region = BoundingBox expanded by `padding` blocks on all sides
 # Y bounds are taken from structure BB (minY/maxY) ± padding, clamped to world height
@@ -28,7 +53,80 @@ default-flags:
 # Wildcards: "*", "minecraft:*", "minecraft:village*", "cobblemon:*_gym"
 
 protected-structures:
-  # Add rules with /sg protect <pattern> [padding]
+    '*':
+        enabled: true
+        padding: 10
+        priority: 10
+        flags:
+          block-break: allow
+          block-place: allow
+          use: allow
+          interact: allow
+          damage-animals: allow
+          pvp: deny
+          sleep: deny
+          respawn-anchors: deny
+          tnt: allow
+          chest-access: allow
+          vehicle-place: allow
+          vehicle-detroy: allow
+          ligher: allow
+          ride: allow
+          potion-splash: allow
+          item-frame-rotation: allow
+          block-trampling: allow
+          firework-damage: allow
+          use-anvil: deny
+          use-dripleaf: allow
+          wind-charge-burst: allow
+          breeze-charge-explosion: deny
+          pistons: deny
+          fire-spread: deny
+          lava-fire: deny
+          ice-melt: deny
+          ice-form: deny
+          frosted-ice-melt: deny
+          frosted-ice-form: deny
+          rr-block-regen: ~.*:10
+          rr-temp-build: allow
+
+    'minecraft:mansion':
+        enabled: true
+        padding: 50
+        priority: 11
+        flags:
+          block-break: allow
+          block-place: allow
+          use: allow
+          interact: allow
+          damage-animals: allow
+          pvp: deny
+          sleep: deny
+          respawn-anchors: deny
+          tnt: allow
+          chest-access: allow
+          vehicle-place: allow
+          vehicle-detroy: allow
+          ligher: allow
+          ride: allow
+          potion-splash: allow
+          item-frame-rotation: allow
+          block-trampling: allow
+          firework-damage: allow
+          use-anvil: deny
+          use-dripleaf: allow
+          wind-charge-burst: allow
+          breeze-charge-explosion: deny
+          pistons: deny
+          fire-spread: deny
+          lava-fire: deny
+          ice-melt: deny
+          ice-form: deny
+          frosted-ice-melt: deny
+          frosted-ice-form: deny
+          rr-block-regen: ~.*:10
+          rr-temp-build: allow
+# Add rules with /sg protect <pattern> [padding]
 
 # Permissions:
 # structureguard.admin, structureguard.find, structureguard.listall, structureguard.teleport
