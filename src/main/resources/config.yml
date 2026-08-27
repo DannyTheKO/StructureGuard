@@ -19,8 +19,8 @@ default-flags:
     tnt: allow
     chest-access: allow
     vehicle-place: allow
-    vehicle-detroy: allow
-    ligher: allow
+    vehicle-destroy: allow
+    lighter: allow
     ride: allow
     potion-splash: allow
     item-frame-rotation: allow
