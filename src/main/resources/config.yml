@@ -3,7 +3,18 @@
 # =============================================================================
 debug: false
 process-existing-chunks: true
-# - resource_world
+
+# World filtering — pick ONE mode:
+# 1) Blacklist (default): protect everywhere except listed worlds
+disabled-worlds:
+  # - resource_world
+  # - creative_world
+
+# 2) Whitelist: if non-empty, ONLY these worlds are protected (blacklist still applies)
+enabled-worlds:
+  # - world
+  # - world_nether
+  # - world_the_end
 
 default-padding: 10
 

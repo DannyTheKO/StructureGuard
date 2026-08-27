@@ -327,7 +327,7 @@ public class RegionManager {
         for (StructureInfo info : unprotected) {
             ProtectionRule rule = plugin.getConfigManager().getProtectionRule(info.type);
             if (rule == null || !rule.enabled) continue;
-            if (plugin.getConfigManager().isWorldDisabled(info.world)) continue;
+            if (!plugin.getConfigManager().isWorldAllowed(info.world)) continue;
             try {
                 String regionId = createRegionWithFlags(info, rule.padding, rule.flags);
                 if (regionId != null) { createdCount++; plugin.getLogger().info("Auto-protected " + info.type + " [" + info.minX + "," + info.minZ + " -> " + info.maxX + "," + info.maxZ + "] -> " + regionId); }

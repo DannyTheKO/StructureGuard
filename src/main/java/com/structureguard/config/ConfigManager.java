@@ -18,6 +18,7 @@ public class ConfigManager {
     private boolean processExistingChunks;
     private Map<String, String> defaultFlags;
     private Set<String> disabledWorlds;
+    private Set<String> enabledWorlds;
     private final Map<String, ProtectionRule> protectionRules = new HashMap<>();
 
     public ConfigManager(StructureGuardPlugin plugin) {
@@ -36,6 +37,11 @@ public class ConfigManager {
         List<String> disabledList = config.getStringList("disabled-worlds");
         for (String world : disabledList) disabledWorlds.add(world.toLowerCase());
         if (!disabledWorlds.isEmpty()) plugin.getLogger().info("Protection disabled in worlds: " + String.join(", ", disabledWorlds));
+        enabledWorlds = new HashSet<>();
+        List<String> enabledList = config.contains("enabled-worlds") ? config.getStringList("enabled-worlds") : config.getStringList("whitelisted-worlds");
+        if (enabledList.isEmpty() && config.contains("allowed-worlds")) enabledList = config.getStringList("allowed-worlds");
+        for (String world : enabledList) enabledWorlds.add(world.toLowerCase());
+        if (!enabledWorlds.isEmpty()) plugin.getLogger().info("Protection whitelisted to worlds: " + String.join(", ", enabledWorlds));
         defaultFlags = new HashMap<>();
         if (config.isConfigurationSection("default-flags")) {
             for (String key : config.getConfigurationSection("default-flags").getKeys(false)) {
@@ -141,6 +147,13 @@ public class ConfigManager {
     public boolean shouldProcessExistingChunks() { return processExistingChunks; }
     public boolean isWorldDisabled(String worldName) { return disabledWorlds.contains(worldName.toLowerCase()); }
     public Set<String> getDisabledWorlds() { return new HashSet<>(disabledWorlds); }
+    public Set<String> getEnabledWorlds() { return new HashSet<>(enabledWorlds); }
+    public boolean isWorldAllowed(String worldName) {
+        String lower = worldName.toLowerCase();
+        if (disabledWorlds.contains(lower)) return false;
+        if (!enabledWorlds.isEmpty() && !enabledWorlds.contains(lower)) return false;
+        return true;
+    }
     public Map<String, String> getDefaultFlags() { return new HashMap<>(defaultFlags); }
     public int getScanChunksPerTick() { return plugin.getConfig().getInt("scan-chunks-per-tick", 512); }
     public boolean isStructureIgnored(String structureName) { return false; }

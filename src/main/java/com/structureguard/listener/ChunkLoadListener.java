@@ -58,7 +58,7 @@ public class ChunkLoadListener implements Listener {
         Chunk chunk = event.getChunk();
         World world = chunk.getWorld();
         String worldName = world.getName();
-        if (plugin.getConfigManager().isWorldDisabled(worldName)) return;
+        if (!plugin.getConfigManager().isWorldAllowed(worldName)) return;
         long chunkKey = ChunkUtil.pack(chunk.getX(), chunk.getZ());
         if (isChunkScannedCached(worldName, chunkKey)) return;
         ChunkTask task = new ChunkTask(world, chunk.getX(), chunk.getZ(), worldName, chunkKey);
