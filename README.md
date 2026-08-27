@@ -1,4 +1,4 @@
-# StructureGuard `1.2.0`
+# StructureGuard `1.2.1`
 
 **Automatic WorldGuard protection for ANY structure — vanilla, modded, or datapack.**
 
@@ -12,11 +12,12 @@
 - 🎨 **Pattern Matching** — Protect `minecraft:*`, `cobblemon:*_gym`, or just `*` for everything
 - ⚡ **Zero Lag** — Async NMS detection, sync region creation, batched DB writes
 - 🔧 **Full WorldGuard Integration** — All flags supported, including Extra Flags
+- ⌨️ **Smart Tab Completion** — Pattern presets (`*`, `minecraft:*`, `*:village*`), flags, worlds, padding
 
 ## Quick Start
 
 ```bash
-# Install WorldGuard, drop StructureGuard-1.2.0.jar in /plugins/, restart
+# Install WorldGuard, drop StructureGuard-1.2.1.jar in /plugins/, restart
 
 # Protect all villages with 5-block padding
 /sg protect minecraft:village 5
@@ -118,15 +119,26 @@ Add world names to `disabled-worlds` to completely skip protection in those worl
 
 | Permission | Description | Default |
 |------------|-------------|---------|
-| `structureguard.admin` | All commands | op |
+| `structureguard.admin` | All admin commands (protect/unprotect/enable/disable/rules/flag/clearregions/resetworld/addowner/removeowner/addmember/removemember/list/status/reload/debug/probe/methods) | op |
 | `structureguard.find` | Use /sg find | op |
 | `structureguard.listall` | Use /sg listall | false |
 | `structureguard.info` | Use /sg info | false |
 | `structureguard.teleport` | Clickable teleport links | op |
 | `structureguard.helper` | Read-only (find/list/listall/info) | false |
-| `structureguard.moderator` | helper + scan/protect/flag/teleport | false |
+| `structureguard.moderator` | helper + protect/flag/teleport | false |
+| `structureguard.use` | Base command access | op |
 
-## Project Structure (`1.2.0` modular layout)
+> `structureguard.admin` children include `find`, `protect`, `clearregions`, `flag`, `addowner`, `removeowner`, `addmember`, `removemember`, `list`, `listall`, `reload`, `teleport`, etc. See `plugin.yml` for full tree.
+
+## Tab Completion (`1.2.1`)
+
+- Pattern commands (`protect`, `unprotect`, `enable`, `disable`, `flag`, `clearregions`, `list`, `find`, `addowner`, `removeowner`, `addmember`, `removemember`) suggest presets `*`, `minecraft:*`, `*:village*` + all registry types
+- `/sg flag` completes flag names (from WorldGuard) and values `allow`/`deny`/`none`
+- `/sg clearregions` completes world names (arg 3)
+- `/sg resetworld` completes world names
+- `/sg protect` / `/sg enable` complete padding `5`/`10`/`15`
+
+## Project Structure (`1.2.1` modular layout)
 
 ```
 src/main/java/com/structureguard/
@@ -136,9 +148,11 @@ src/main/java/com/structureguard/
 ├── structure/       StructureFinder + model/{StructureResult,ScanState} + nms/NmsReflectionCache
 ├── region/          RegionManager, RegionFlagService
 ├── listener/        ChunkLoadListener
-├── command/         SgCommand (router) + SgSubCommand + subcommand/* (19 per-file commands)
+├── command/         SgCommand (router) + SgSubCommand + subcommand/* (20 per-file commands)
 └── util/            PatternMatcher, ChunkUtil
 ```
+
+Subcommands (20): `find`, `listall`, `info`, `protect`, `unprotect`, `enable`, `disable`, `rules`, `flag`, `clearregions`, `resetworld`, `addowner`, `removeowner`, `addmember`, `removemember`, `list`, `status`, `reload`, `debug`, `probe`, `methods`.
 
 ## Build
 
@@ -148,16 +162,21 @@ BUILD.bat
 # or
 ./gradlew clean shadowJar
 
-# Output: build/libs/StructureGuard-1.2.0.jar
+# Output: build/libs/StructureGuard-1.2.1.jar
 ```
 
-Version is defined in `build.gradle` (`version = '1.2.0'`) and injected into `plugin.yml` (`${version}`) at build time. The JAR is now versioned (`StructureGuard-1.2.0.jar`) for clean release tracking.
+Version is defined in `build.gradle` (`version = '1.2.1'`) and injected into `plugin.yml` (`${version}`) at build time. The JAR is now versioned (`StructureGuard-1.2.1.jar`) for clean release tracking.
 
 ## Requirements
 
 - Minecraft 1.21+
 - WorldGuard 7.0+
 - Java 21+
+
+## Changelog
+
+- **1.2.1** — Smart tab completion (pattern presets, flag/world/padding completion), versioned JAR fix
+- **1.2.0** — Modular package structure, BoundingBox mode, on-demand protection
 
 ## License
 

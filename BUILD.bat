@@ -7,7 +7,7 @@ echo.
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo Build successful!
-    echo JAR location: build\libs\StructureGuard-1.2.0.jar
+    echo JAR location: build\libs\StructureGuard-1.2.1.jar
 ) else (
     echo.
     echo Build failed!
